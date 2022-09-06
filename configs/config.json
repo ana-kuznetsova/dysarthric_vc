@@ -1,0 +1,19 @@
+{
+    "data":{
+        "dataset":"LibriTTS",
+        "dataset_path":"/data/common/LibriTTS",
+        "train_partition":"train-clean-360",
+        "test_partition":"test-clean", 
+        "feature": "melspec",
+        "feature_dim":80,
+        "pitch":true,
+    },
+
+    "trainer":{
+        "epoch":10000,
+        "batch_size":32,
+        "ckpt": null,
+    },
+    "model":{
+    }
+}
