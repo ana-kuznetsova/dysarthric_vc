@@ -5,12 +5,14 @@ import numpy as np
 import librosa
 import parselmouth
 import json
-from collections import namedtuple
+from attrdict import AttrDict
+
 
 
 def load_config(path):
     with open(path, 'r') as fo:
-        config = json.load(fo, object_hook=lambda d: namedtuple('config', d.keys())(*d.values()))
+        config = json.load(fo)
+    config = AttrDict(config)
     return config
 
 
