@@ -12,9 +12,8 @@ from attrdict import AttrDict
 def load_config(path):
     with open(path, 'r') as fo:
         config = json.load(fo)
-    print(config)
     config = AttrDict(config)
-    print(config)
+    print(config.data)
     return config
 
 
