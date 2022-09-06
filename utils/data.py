@@ -5,15 +5,17 @@ import numpy as np
 import librosa
 import parselmouth
 import json
+from collections import namedtuple
 
-class objectview(object):
-    def __init__(self, d):
-        self.__dict__ = d
 
 def load_config(path):
     with open(path, 'r') as fo:
         config = json.load(fo)
-    config = objectview(config)
+
+    def _json_object_hook(d): return namedtuple('X', d.keys())(*d.values())
+    def json2obj(data): return json.loads(data, object_hook=_json_object_hook)
+    
+    config = json2obj(config)
     return config
 
 
