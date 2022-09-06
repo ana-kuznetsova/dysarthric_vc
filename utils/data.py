@@ -29,7 +29,6 @@ def collect_fnames(path):
 def get_pitch(path):
     snd = parselmouth.Sound(path)
     pitch = snd.to_pitch()
-    print(pitch)
     pitch_arr = []
     for i in range(pitch.n_frames):
         pitch_arr.append(pitch.get_value_in_frame(i))
