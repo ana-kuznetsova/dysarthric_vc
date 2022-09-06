@@ -1,5 +1,4 @@
-{
-    "data":{
+{   "data":{
         "dataset":"LibriTTS",
         "dataset_path":"/data/common/LibriTTS",
         "train_partition":"train-clean-360",

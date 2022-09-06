@@ -13,6 +13,7 @@ def load_config(path):
     with open(path, 'r') as fo:
         config = json.load(fo)
     config = AttrDict(config)
+    print(config)
     return config
 
 
