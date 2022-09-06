@@ -46,8 +46,7 @@ class Trainer():
 
 
 if __name__ == "__main__":
-
-
     config = load_config(sys.argv[1])
+    print(config)
     trainer = Trainer(config)
     trainer.train()
