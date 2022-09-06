@@ -12,8 +12,11 @@ def load_config(path):
     with open(path, 'r') as fo:
         config = json.load(fo)
 
-    def _json_object_hook(d): return namedtuple('X', d.keys())(*d.values())
-    def json2obj(data): return json.loads(config, object_hook=_json_object_hook)
+    def _json_object_hook(d): 
+        return namedtuple('X', d.keys())(*d.values())
+
+    def json2obj(config): 
+        return json.loads(config, object_hook=_json_object_hook)
 
     config = json2obj(config)
     return config
