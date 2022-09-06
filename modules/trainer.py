@@ -37,7 +37,7 @@ class Trainer():
                                   drop_last=True, num_workers=2
                                 )
         for batch in train_loader:
-            print(batch[x].shape, batch['p'].shape)
+            print(batch['x'].shape, batch['p'].shape)
 
     
     def inference(self):

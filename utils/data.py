@@ -1,5 +1,6 @@
 import torch.utils.data as data
 import torch
+import torch.nn as nn
 import os
 import numpy as np
 import librosa
@@ -70,8 +71,15 @@ def collate_fn(data):
     for fname in data:
         wav, fs = librosa.load(fname, sr=16000)
         spec = librosa.feature.melspectrogram(y=wav, sr=fs, n_mels=80)
-        mel_specs.append(spec)
+        mel_specs.append(torch.Tensor(spec))
         f0 = get_pitch(fname)
-        pitch.append(f0)
+        pitch.append(torch.Tensor(f0))
+    
+    maxlen_mel = max([i.shape[-1] for i in mel_specs])
+    padded_mels = [nn.ZeroPad2d(padding=(0, maxlen_mel - i.shape[-1], 0, 0))(i) for i in mel_specs]
+    
+    maxlen_p = max([i.shape[-1] for i in pitch])
 
-    return {"x":torch.stack(mel_specs), "p": torch.stack(pitch)}
+    padded_pitch = [nn.ConstantPad1d((0, maxlen_p-i.shape[-1]), 0)(i.unsqueeze(0)) for i in pitch]
+
+    return {"x":torch.stack(padded_mels), "p": torch.stack(padded_pitch)}
