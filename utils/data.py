@@ -10,7 +10,7 @@ from collections import namedtuple
 
 def load_config(path):
     with open(path, 'r') as fo:
-        config = json.loads(fo, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+        config = json.load(fo, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
     return config
 
 
