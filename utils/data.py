@@ -43,7 +43,7 @@ class LibriTTSData(data.Dataset):
         self.train_path = os.path.join(self.data_path, configs.train_partition)
         self.test_path = os.path.join(self.data_path, configs.test_partition)
         self.train_files = collect_fnames(self.train_path)
-        self.test_files = collect_fnames(self.test_files)
+        self.test_files = collect_fnames(self.test_path)
 
 
     def __len__(self):
