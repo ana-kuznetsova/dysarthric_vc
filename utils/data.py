@@ -60,7 +60,7 @@ class LibriTTSData(data.Dataset):
 
 
 
-def collate_fn(data, configs):
+def collate_fn(data):
     '''
     For batch
     '''
@@ -69,12 +69,9 @@ def collate_fn(data, configs):
 
     for fname in data:
         wav, fs = librosa.load(fname, sr=16000)
-        if configs.data.feature=='melspec':
-            spec = librosa.feature.melspectrogram(y=wav, sr=fs, n_mels=configs.data.feature_dim)
-            mel_specs.append(spec)
-        if configs.data.pitch:
-            f0 = get_pitch(fname)
-            pitch.append(f0)
-    if configs.data.pitch:
-        return {"x":torch.stack(mel_specs), "p": torch.stack(pitch)}
-    return {"x":torch.stack(mel_specs)}
+        spec = librosa.feature.melspectrogram(y=wav, sr=fs, n_mels=configs.data.feature_dim)
+        mel_specs.append(spec)
+        f0 = get_pitch(fname)
+        pitch.append(f0)
+
+    return {"x":torch.stack(mel_specs), "p": torch.stack(pitch)}
