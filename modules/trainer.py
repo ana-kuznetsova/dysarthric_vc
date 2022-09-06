@@ -3,7 +3,7 @@ import json
 import torch
 import sys
 
-from utils.data import LibriTTSData, collate_fn
+from utils.data import LibriTTSData, collate_fn, load_config
 from torch.utils.data import random_split, DataLoader
 
 
@@ -47,6 +47,7 @@ class Trainer():
 
 if __name__ == "__main__":
 
-    config = json.loads(sys.argv[1])
+
+    config = load_config(sys.argv[1])
     trainer = Trainer(config)
     trainer.train()

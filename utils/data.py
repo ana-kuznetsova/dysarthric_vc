@@ -4,6 +4,13 @@ import os
 import numpy as np
 import librosa
 import parselmouth
+import json
+
+
+def load_config(path):
+    with open(path, 'r') as fo:
+        config = json.load(fo)
+    return config
 
 
 def collect_fnames(path):
