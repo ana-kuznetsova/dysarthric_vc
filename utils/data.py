@@ -39,9 +39,9 @@ def get_pitch(path):
 class LibriTTSData(data.Dataset):
     def __init__(self, configs, mode='train'):
         self.mode = mode
-        self.data_path = configs.data.dataset_path
-        self.train_path = os.path.join(self.data_path, configs.data.train_partition)
-        self.test_path = os.path.join(self.data_path, configs.data.test_partition)
+        self.data_path = configs.dataset_path
+        self.train_path = os.path.join(self.data_path, configs.train_partition)
+        self.test_path = os.path.join(self.data_path, configs.test_partition)
         self.train_files = collect_fnames(self.train_path)
         self.test_files = collect_fnames(self.test_files)
 
