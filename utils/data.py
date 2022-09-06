@@ -69,7 +69,7 @@ def collate_fn(data):
 
     for fname in data:
         wav, fs = librosa.load(fname, sr=16000)
-        spec = librosa.feature.melspectrogram(y=wav, sr=fs, n_mels=configs.data.feature_dim)
+        spec = librosa.feature.melspectrogram(y=wav, sr=fs, n_mels=80)
         mel_specs.append(spec)
         f0 = get_pitch(fname)
         pitch.append(f0)
