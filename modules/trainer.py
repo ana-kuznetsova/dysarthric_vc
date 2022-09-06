@@ -11,8 +11,8 @@ class Trainer():
     def __init__(self, configs):
         super(Trainer, self).__init__()
 
-        self.epoch = configs["trainer"]['epoch']
-        self.batch_size = configs["trainer"]["batch_size"]
+        self.epoch = configs.trainer.epoch
+        self.batch_size = configs.trainer.batch_size
         self.ckpt = configs.trainer.ckpt
         self.data_parallel = configs.trainer.data_parallel
         self.data_config = configs.data
