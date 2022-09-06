@@ -27,6 +27,7 @@ def collect_fnames(path):
 
 
 def get_pitch(path):
+    print(path)
     snd = parselmouth.Sound(path)
     pitch = snd.to_pitch()
     pitch_arr = []
