@@ -1,4 +1,5 @@
 import torch.utils.data as data
+import torch
 import os
 import numpy as np
 import librosa
@@ -49,7 +50,7 @@ class LibriTTSData(data.Dataset):
 
 
 
-def collate_custom(data, configs):
+def collate_fn(data, configs):
     '''
     For batch
     '''

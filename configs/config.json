@@ -13,6 +13,7 @@
         "epoch":10000,
         "batch_size":32,
         "ckpt": null,
+        "data_parallel": true,
     },
     "model":{
     }
