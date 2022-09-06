@@ -80,6 +80,6 @@ def collate_fn(data):
     
     maxlen_p = max([i.shape[-1] for i in pitch])
 
-    padded_pitch = [nn.ConstantPad1d((0, maxlen_p-i.shape[-1]), 0)(i.unsqueeze(0)) for i in pitch]
+    padded_pitch = [nn.ConstantPad1d((0, maxlen_p-i.shape[-1]), 0)(i) for i in pitch]
 
     return {"x":torch.stack(padded_mels), "p": torch.stack(padded_pitch)}
