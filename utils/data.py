@@ -31,7 +31,7 @@ def get_pitch(path):
     pitch = snd.to_pitch()
     print(pitch)
     pitch_arr = []
-    for i in range(pitch.n_frames()):
+    for i in range(pitch.n_frames):
         pitch_arr.append(pitch.get_value_in_frame(i))
     return np.nan_to_num(np.array(pitch_arr))
 
