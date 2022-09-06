@@ -19,7 +19,7 @@ class Struct(dict):
 
 def load_config(path):
     with open(path, 'r') as fo:
-        config = json.loads(fo, object_hook=Struct)
+        config = json.load(fo, object_hook=Struct)
     return config
 
 
