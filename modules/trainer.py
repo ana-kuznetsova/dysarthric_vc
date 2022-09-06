@@ -4,6 +4,8 @@ import torch
 import sys
 
 from utils.data import LibriTTSData, collate_fn, load_config
+from encoder import DysarthEncoder
+
 from torch.utils.data import random_split, DataLoader
 
 
@@ -16,6 +18,7 @@ class Trainer():
         self.ckpt = configs.trainer.ckpt
         self.data_parallel = configs.trainer.data_parallel
         self.data_config = configs.data
+        self.config = configs
     
     def train(self):
 
@@ -36,8 +39,14 @@ class Trainer():
                                   shuffle=True, collate_fn=collate_fn,
                                   drop_last=True, num_workers=2
                                 )
+        device = "cuda"
+        model = DysarthEncoder(self.config)
+        model = model.to(device)
+
         for batch in train_loader:
-            print(batch['x'].shape, batch['p'].shape)
+            x = batch['x'].to(device)
+            out = model(x)
+            print(out.shape)
 
     
     def inference(self):
