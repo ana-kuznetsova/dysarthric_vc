@@ -11,14 +11,7 @@ from collections import namedtuple
 def load_config(path):
     with open(path, 'r') as fo:
         config = json.load(fo)
-
-    def _json_object_hook(d): 
-        return namedtuple('X', d.keys())(*d.values())
-
-    def json2obj(config): 
-        return json.loads(config, object_hook=_json_object_hook)
-
-    config = json2obj(config)
+    config = json.loads(config, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
     return config
 
 
