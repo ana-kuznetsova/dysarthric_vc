@@ -47,6 +47,6 @@ class Trainer():
 
 if __name__ == "__main__":
 
-    config = json.load(sys.argv[1])
+    config = json.loads(sys.argv[1])
     trainer = Trainer(config)
     trainer.train()
