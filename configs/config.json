@@ -6,13 +6,13 @@
         "test_partition":"test-clean", 
         "feature": "melspec",
         "feature_dim":80,
-        "pitch":true,
+        "pitch":true
     },
     "trainer":{
         "epoch":10000,
         "batch_size":32,
         "ckpt": null,
-        "data_parallel": true,
+        "data_parallel": true
     },
     "model":{
     }
