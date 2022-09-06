@@ -1,6 +1,0 @@
-README.md
-setup.py
-dysarthric_vc.egg-info/PKG-INFO
-dysarthric_vc.egg-info/SOURCES.txt
-dysarthric_vc.egg-info/dependency_links.txt
-dysarthric_vc.egg-info/top_level.txt
