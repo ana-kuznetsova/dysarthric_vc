@@ -3,7 +3,7 @@ import json
 import torch
 import sys
 
-from utils.data import LibriTTSData, collate_fn, load_config
+from utils.data import LibriTTSData, collate_fn, load_config, VCTKData
 from encoder import DysarthEncoder
 
 from torch.utils.data import random_split, DataLoader
@@ -23,9 +23,14 @@ class Trainer():
     def train(self):
 
         ##Preload data
-        dataset = LibriTTSData(self.data_config, mode='train')
+        if self.config.data.dataset=='LibriTTS':
+            dataset = LibriTTSData(self.data_config, mode='train')
+        else:
+            dataset = VCTKData(self.data_config, mode='train')
         train_len = int(len(dataset)*0.9)
-        val_len = int(len(dataset)*0.1)
+        val_len = len(dataset) -  int(len(dataset)*0.9)
+
+        print(f"len dataset {len(dataset)}")
         train, val = random_split(dataset, [train_len, val_len], 
                                   generator=torch.Generator().manual_seed(42))
 
