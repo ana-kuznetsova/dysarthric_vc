@@ -28,7 +28,7 @@ def collect_fnames(path):
 
 
 def get_pitch(path):
-    snd = parselmouth.Sound(path)
+    snd = parselmouth.Sound(path[0]).resample(16000)
     pitch = snd.to_pitch()
     pitch_arr = []
     for i in range(pitch.n_frames):
@@ -37,41 +37,44 @@ def get_pitch(path):
 
 
 def filter_speakers(configs):
-        test_spk = configs.test_partition
-        ignore = configs.ignore_speakers
-        all_wav_paths = collect_fnames(configs.dataset_path)
-        all_wav_paths = [f for f in all_wav_paths for i in ignore if i not in f]
-        test_files = []
-        train_files = []
+    test_spk = configs.test_partition
+    ignore = configs.ignore_speakers
+    all_wav_paths = collect_fnames(configs.dataset_path)
+    all_wav_paths = [f for f in all_wav_paths for i in ignore if i not in f]
+    test_files = []
+    train_files = []
 
-        for f in all_wav_paths:
-            for t in test_spk:
-                if t not in f:
-                    test_files.append(f)
-                else:
-                    train_files.append(f)
+    for f in all_wav_paths:
+        for t in test_spk:
+            if t not in f:
+                test_files.append(f)
+            else:
+                train_files.append(f)
 
-        unique_speakers = os.listdir(configs.dataset_path)
-        for i in ignore:
-            unique_speakers.remove(i)
+    unique_speakers = os.listdir(configs.dataset_path)
+    for i in ignore:
+        unique_speakers.remove(i)
+        unique_speakers.remove('log.txt')
 
-        spk2id_map = {}
+    spk2id_map = {}
 
-        for i in range(len(unique_speakers)):
-            spk2id_map[unique_speakers[i]] = i
-        
-        train_spk_ids = []
-        test_spk_ids = []
-        
-        for i in train_files:
-            spk_id = i.split('/')[-1].split('_')[0]
-            train_spk_ids.append(spk2id_map[spk_id])
+    for i in range(len(unique_speakers)):
+        spk2id_map[unique_speakers[i]] = i
+    
+    print(f"Found {len(spk2id_map.keys())} unique speakers, skipping {ignore}...")
 
-        for i in test_files:
-            spk_id = i.split('/')[-1].split('_')[0]
-            test_spk_ids.append(spk2id_map[spk_id])
+    train_spk_ids = []
+    test_spk_ids = []
+    
+    for i in train_files:
+        spk_id = i.split('/')[-1].split('_')[0]
+        train_spk_ids.append(spk2id_map[spk_id])
 
-        return train_files, train_spk_ids,  test_files, test_spk_ids
+    for i in test_files:
+        spk_id = i.split('/')[-1].split('_')[0]
+        test_spk_ids.append(spk2id_map[spk_id])
+
+    return train_files, train_spk_ids,  test_files, test_spk_ids
 
 class LibriTTSData(data.Dataset):
     def __init__(self, configs, mode='train'):

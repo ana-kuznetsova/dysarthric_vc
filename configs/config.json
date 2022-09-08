@@ -15,9 +15,7 @@
         "data_parallel": true
     },
     "model":{
-        "spk_id_size":64,
-        "pitch_size":64,
-        "dysarth_size":64,
-        "spk_encoder_size":512
+        "feat_encoder_dim":512,
+        "hidden_dim":128
     }
 }

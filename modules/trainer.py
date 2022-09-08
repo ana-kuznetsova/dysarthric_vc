@@ -4,9 +4,10 @@ import torch
 import sys
 
 from utils.data import LibriTTSData, collate_fn, load_config, VCTKData
-from encoder import DysarthEncoder
+from encoder import GeneralEncoder
 
 from torch.utils.data import random_split, DataLoader
+from TTS.encoder.models.resnet import ResNetSpeakerEncoder
 
 
 class Trainer():
@@ -30,7 +31,6 @@ class Trainer():
         train_len = int(len(dataset)*0.9)
         val_len = len(dataset) -  int(len(dataset)*0.9)
 
-        print(f"len dataset {len(dataset)}")
         train, val = random_split(dataset, [train_len, val_len], 
                                   generator=torch.Generator().manual_seed(42))
 
@@ -45,12 +45,20 @@ class Trainer():
                                   drop_last=True, num_workers=2
                                 )
         device = "cuda"
-        model = DysarthEncoder(self.config)
+
+        feat_extractor = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
+        model = GeneralEncoder(inp_feature_dim=config.model.feat_encoder_dim,
+                feature_extractor=feat_extractor,
+                feat_extractor_dim=config.model.feat_encoder_dim,
+                hidden_dim=config.model.hidden_dim, 
+                batch_size=config.trainer.batch_size)
+
         model = model.to(device)
 
         for batch in train_loader:
             x = batch['x'].to(device)
-            out = model(x)
+            p = batch['p'].to(device)
+            out = model(x, p)
             print(out.shape)
 
     
