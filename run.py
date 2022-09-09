@@ -5,6 +5,7 @@ from modules.Trainer import Trainer
 from torch.utils.data import random_split, DataLoader
 from TTS.encoder.models.resnet import ResNetSpeakerEncoder
 from TTS.encoder.losses import AngleProtoLoss
+from torch.utils.data import Subset
 
 import wandb
 
@@ -31,23 +32,48 @@ def run_training(config):
         dataset = VCTKAngleProtoData(config, mode='train')
     else:
         dataset = VCTKData(config, mode='train')
+
+
+    if config.model.model_name=='speaker_encoder':
+        #Do not shuffle
+        num_batches = len(dataset)*0.9//config.data.batch_size
+        train_len = config.data.batch_size*num_batches
+        val_len = len(dataset) - train_len 
+        train_ind = [i for in in range(train_len)]
+        val_ind = [train_len+i for i in range(val_len)]
+        
+        train = Subset(dataset, train_ind)
+        val = Subset(dataset, val_ind)
+
+        train_loader = DataLoader(train,
+                                batch_size=self.batch_size, 
+                                shuffle=False, collate_fn=collate_fn,
+                                drop_last=True, num_workers=2
+                            )
+        val_loader = DataLoader(val,
+                                    batch_size=self.batch_size, 
+                                    shuffle=False, collate_fn=collate_fn,
+                                    drop_last=True, num_workers=2
+                                )
+
+    else:
     
-    train_len = int(len(dataset)*0.9)
-    val_len = len(dataset) -  int(len(dataset)*0.9)
+        train_len = int(len(dataset)*0.9)
+        val_len = len(dataset) -  int(len(dataset)*0.9)
 
-    train, val = random_split(dataset, [train_len, val_len], 
-                                generator=torch.Generator().manual_seed(42))
+        train, val = random_split(dataset, [train_len, val_len], 
+                                    generator=torch.Generator().manual_seed(42))
 
-    train_loader = DataLoader(train,
-                                batch_size=self.batch_size, 
-                                shuffle=True, collate_fn=collate_fn,
-                                drop_last=True, num_workers=2
-                            )
-    val_loader = DataLoader(val,
-                                batch_size=self.batch_size, 
-                                shuffle=True, collate_fn=collate_fn,
-                                drop_last=True, num_workers=2
-                            )
+        train_loader = DataLoader(train,
+                                    batch_size=self.batch_size, 
+                                    shuffle=True, collate_fn=collate_fn,
+                                    drop_last=True, num_workers=2
+                                )
+        val_loader = DataLoader(val,
+                                    batch_size=self.batch_size, 
+                                    shuffle=True, collate_fn=collate_fn,
+                                    drop_last=True, num_workers=2
+                                )
 
 
     ## Define model
