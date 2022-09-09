@@ -13,7 +13,11 @@ class Trainer():
         self.data_config = configs.data
         self.config = configs
     
-    def train(self, train_loader, val_loader, model, device):
+    def train(self, train_loader, 
+              val_loader, model, criterion,
+              optimizer,
+              device):
+              
         model = model.to(device)
 
         for batch in train_loader:

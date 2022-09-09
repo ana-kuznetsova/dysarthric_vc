@@ -17,6 +17,15 @@
     "model":{
         "model_name":"speaker_encoder",
         "feat_encoder_dim":512,
+        "num_speakers":4,
+        "num_utter":8,
         "hidden_dim":128
+    },
+    "runner":{
+        "wandb":false,
+        "project_name": "dysarthric_vc",
+        "entity":"anakuzne", 
+        "log_config":false,
+        "cuda_device":"4,5"
     }
 }

@@ -7,6 +7,7 @@ import librosa
 import parselmouth
 import json
 from attrdict import AttrDict
+import random
 
 
 
@@ -74,14 +75,14 @@ def filter_speakers(configs):
         spk_id = i.split('/')[-1].split('_')[0]
         test_spk_ids.append(spk2id_map[spk_id])
 
-    return train_files, train_spk_ids,  test_files, test_spk_ids
+    return train_files, train_spk_ids,  test_files, test_spk_ids, spk2id_map
 
 class LibriTTSData(data.Dataset):
-    def __init__(self, configs, mode='train'):
+    def __init__(self, config, mode='train'):
         self.mode = mode
-        self.data_path = configs.dataset_path
-        self.train_path = os.path.join(self.data_path, configs.train_partition)
-        self.test_path = os.path.join(self.data_path, configs.test_partition)
+        self.data_path = config.data.dataset_path
+        self.train_path = os.path.join(self.data_path, config.data.train_partition)
+        self.test_path = os.path.join(self.data_path, config.data.test_partition)
         self.train_files = collect_fnames(self.train_path)
         self.test_files = collect_fnames(self.test_path)
 
@@ -99,13 +100,74 @@ class LibriTTSData(data.Dataset):
 
 
 class VCTKData(data.Dataset):
-    def __init__(self, configs, mode='train'):
+    def __init__(self, config, mode='train'):
         self.mode = mode
-        self.data_path = configs.dataset_path
+        self.data_path = config.data.dataset_path
         
-        train_files, train_spk_ids, test_files, test_spk_ids = filter_speakers(configs)
+        train_files, train_spk_ids, test_files, test_spk_ids, spk2id_map = filter_speakers(configs)
         self.train_files = train_files
         self.train_spk_ids = train_spk_ids
+        self.test_files = test_files
+        self.test_spk_ids = test_spk_ids
+
+    def __len__(self):
+        if self.mode=='train':
+            return len(self.train_files)
+        return len(self.test_files)
+    
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        if self.mode=='train':
+            return (self.train_files[idx], self.train_spk_ids[idx])
+        return (self.test_files[idx], self.test_spk_ids[idx])
+
+
+class VCTKAngleProtoData(data.Dataset):
+    def __init__(self, config, mode='train'):
+        self.mode = mode
+        self.data_path = config.data.dataset_path
+        
+        train_files, train_spk_ids, test_files, test_spk_ids, spk2id_map = filter_speakers(config)
+
+        assert config.model.num_speakers*configs.model.num_utter == config.data.batch_size
+        #map speakers to files 
+
+        spk2file_map = {s:[] for s in spk2id_map}
+
+        for s in spk2id_map:
+            for f in train_files:
+                if s in f:
+                    spk2file_map[s].append(f)
+        
+        train_arranged = []
+        speakers = list(spk2file_map.keys())
+
+        while len(speakers)>0:
+            #Check if all speakers have enough utters
+            for s in speakers:
+                if len(spk2file_map[s]) < config.model.num_utter:
+                    speakers.remove(s)
+
+            if len(speakers) < config.model.num_speakers:
+                break
+
+            for i in range(config.model.num_speakers):
+                spk = random.choice(speakers)
+                utters = []
+                for i in range(config.model.num_utter):
+                    utters.append(spk2file_map[spk][0])
+                    spk2file_map[spk].pop(0)
+                train_arranged.extend(utters)
+
+        print(f"> Number of train utterances: {len(train_arranged)}")
+        train_spk_ids_arranged = []
+        for i in train_arranged:
+            spk_id = i.split('/')[-1].split('_')[0]
+            train_spk_ids_arranged.append(spk2id_map[spk_id])
+
+        self.train_files = train_arranged
+        self.train_spk_ids = train_spk_ids_arranged
         self.test_files = test_files
         self.test_spk_ids = test_spk_ids
 

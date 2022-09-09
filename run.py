@@ -1,17 +1,36 @@
-from utils.data import LibriTTSData, collate_fn, load_config, VCTKData
+from utils.data import LibriTTSData, collate_fn, load_config, VCTKData, VCTKAngleProtoData
 from modules.encoder import GeneralEncoder
 from modules.Trainer import Trainer
 
 from torch.utils.data import random_split, DataLoader
 from TTS.encoder.models.resnet import ResNetSpeakerEncoder
+from TTS.encoder.losses import AngleProtoLoss
+
+import wandb
 
 
 def run_training(config):
+
+    #wandb configs
+    if config.runner.wandb:
+        wandb.init(project=config.runner.project_name, entity=config.runner.entity)
+    if config.runner.log_configs:
+        wandb.config = config
+        #wandb.log({"loss": loss})
+
+    
+    #Cuda settings
+    device = config.runner.cuda_device
+
+
     ##Preload data
     if config.data.dataset=='LibriTTS':
-        dataset = LibriTTSData(self.data_config, mode='train')
+        dataset = LibriTTSData(config, mode='train')
+
+    elif config.data.dataset=='VCTK' and config.model.model_name=='speaker_encoder':
+        dataset = VCTKAngleProtoData(config, mode='train')
     else:
-        dataset = VCTKData(self.data_config, mode='train')
+        dataset = VCTKData(config, mode='train')
     
     train_len = int(len(dataset)*0.9)
     val_len = len(dataset) -  int(len(dataset)*0.9)
@@ -33,11 +52,15 @@ def run_training(config):
 
     ## Define model
     avail_models = ["speaker_encoder", "general_encoder", "joint_vc"]
+
     if not config.model.model_name in avail_models:
         raise NotImplementedError(f"{config.model.model_name}: model not implemented")
 
+    #Define model, riterion and optimizer for each model
+
     if config.model.model_name=='speaker_encoder':
-        feat_extractor = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
+        model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
+        loss = AngleProtoLoss()
 
     elif config.model.model_name=='general_encoder':
         feat_extractor = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
@@ -48,7 +71,7 @@ def run_training(config):
                 batch_size=config.trainer.batch_size)
 
     trainer = Trainer(config)
-    trainer.train()
+    trainer.train(train_loader, val_loader, model, criterion, device)
 
 if __name__ == "__main__":
     config = load_config(sys.argv[1])
