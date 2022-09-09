@@ -21,7 +21,7 @@ def collect_fnames(path):
     all_files = []
     for root, dir, files in os.walk(path):
         for f in files:
-            if '.wav' in f or '.flac' in f:
+            if '.wav' in f:
                 f = os.path.join(root, f)
                 all_files.append(f)
     return all_files

@@ -15,6 +15,7 @@
         "data_parallel": true
     },
     "model":{
+        "model_name":"speaker_encoder",
         "feat_encoder_dim":512,
         "hidden_dim":128
     }
