@@ -26,6 +26,6 @@
         "project_name": "dysarthric_vc",
         "entity":"anakuzne", 
         "log_config":false,
-        "cuda_device":"4,5"
+        "cuda_device":[4, 5]
     }
 }

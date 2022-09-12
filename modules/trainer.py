@@ -17,8 +17,13 @@ class Trainer():
               val_loader, model, criterion,
               optimizer,
               scheduler,
-              device):
-              
+              device, 
+              parallel=False):
+        
+        if not parallel:
+            device = "cuda"
+            print(f"> Using CUDA {device}")
+
         model = model.to(device)
 
         if self.config.model.model_name=='speaker_encoder':

@@ -6,6 +6,7 @@ from torch.utils.data import random_split, DataLoader
 from TTS.encoder.models.resnet import ResNetSpeakerEncoder
 from TTS.encoder.losses import AngleProtoLoss
 from torch.utils.data import Subset
+import torch
 
 import wandb
 import sys
@@ -50,12 +51,12 @@ def run_training(config):
         print(f"train {len(train)}, val {len(val)}")
 
         train_loader = DataLoader(train,
-                                batch_size=self.batch_size, 
+                                batch_size=config.trainer.batch_size, 
                                 shuffle=False, collate_fn=collate_fn,
                                 drop_last=True, num_workers=2
                             )
         val_loader = DataLoader(val,
-                                    batch_size=self.batch_size, 
+                                    batch_size=config.trainer.batch_size, 
                                     shuffle=False, collate_fn=collate_fn,
                                     drop_last=True, num_workers=2
                                 )
@@ -90,7 +91,7 @@ def run_training(config):
 
     if config.model.model_name=='speaker_encoder':
         model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
-        loss = AngleProtoLoss()
+        criterion = AngleProtoLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=5e-5)
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.25)
 
