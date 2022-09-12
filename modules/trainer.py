@@ -16,6 +16,7 @@ class Trainer():
     def train(self, train_loader, 
               val_loader, model, criterion,
               optimizer,
+              scheduler,
               device):
               
         model = model.to(device)

@@ -87,6 +87,8 @@ def run_training(config):
     if config.model.model_name=='speaker_encoder':
         model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
         loss = AngleProtoLoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=5e-5)
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.25)
 
     elif config.model.model_name=='general_encoder':
         feat_extractor = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
@@ -97,7 +99,10 @@ def run_training(config):
                 batch_size=config.trainer.batch_size)
 
     trainer = Trainer(config)
-    trainer.train(train_loader, val_loader, model, criterion, device)
+    trainer.train(train_loader, val_loader, 
+                  model, criterion,
+                  optimizer, lr_scheduler, 
+                  device)
 
 if __name__ == "__main__":
     config = load_config(sys.argv[1])
