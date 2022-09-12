@@ -1,6 +1,6 @@
 from utils.data import LibriTTSData, collate_fn, load_config, VCTKData, VCTKAngleProtoData
 from modules.encoder import GeneralEncoder
-from modules.Trainer import Trainer
+from modules.trainer import Trainer
 
 from torch.utils.data import random_split, DataLoader
 from TTS.encoder.models.resnet import ResNetSpeakerEncoder
@@ -8,6 +8,7 @@ from TTS.encoder.losses import AngleProtoLoss
 from torch.utils.data import Subset
 
 import wandb
+import sys
 
 
 def run_training(config):
@@ -15,7 +16,7 @@ def run_training(config):
     #wandb configs
     if config.runner.wandb:
         wandb.init(project=config.runner.project_name, entity=config.runner.entity)
-    if config.runner.log_configs:
+    if config.runner.log_config:
         wandb.config = config
         #wandb.log({"loss": loss})
 
@@ -36,14 +37,17 @@ def run_training(config):
 
     if config.model.model_name=='speaker_encoder':
         #Do not shuffle
-        num_batches = len(dataset)*0.9//config.data.batch_size
-        train_len = config.data.batch_size*num_batches
-        val_len = len(dataset) - train_len 
-        train_ind = [i for in in range(train_len)]
+        num_batches = int(len(dataset)*0.9//config.trainer.batch_size)
+        train_len = int(config.trainer.batch_size*num_batches)
+        num_batches = int(len(dataset)*0.1//config.trainer.batch_size)
+        val_len = int(config.trainer.batch_size*num_batches) 
+
+        train_ind = [i for i in range(train_len)]
         val_ind = [train_len+i for i in range(val_len)]
         
         train = Subset(dataset, train_ind)
         val = Subset(dataset, val_ind)
+        print(f"train {len(train)}, val {len(val)}")
 
         train_loader = DataLoader(train,
                                 batch_size=self.batch_size, 
@@ -106,3 +110,4 @@ def run_training(config):
 
 if __name__ == "__main__":
     config = load_config(sys.argv[1])
+    run_training(config)

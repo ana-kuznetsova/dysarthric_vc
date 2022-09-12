@@ -38,21 +38,25 @@ def get_pitch(path):
 
 
 def filter_speakers(configs):
-    test_spk = configs.test_partition
-    ignore = configs.ignore_speakers
-    all_wav_paths = collect_fnames(configs.dataset_path)
+    test_spk = list(configs.data.test_partition)
+    ignore = configs.data.ignore_speakers
+    all_wav_paths = collect_fnames(configs.data.dataset_path)
     all_wav_paths = [f for f in all_wav_paths for i in ignore if i not in f]
     test_files = []
     train_files = []
 
     for f in all_wav_paths:
+        flag = False
         for t in test_spk:
-            if t not in f:
+            if t in f:
+                flag=True
                 test_files.append(f)
-            else:
-                train_files.append(f)
+                break    
+        if flag==False:
+            train_files.append(f)
+                
 
-    unique_speakers = os.listdir(configs.dataset_path)
+    unique_speakers = os.listdir(configs.data.dataset_path)
     for i in ignore:
         unique_speakers.remove(i)
         unique_speakers.remove('log.txt')
@@ -62,7 +66,7 @@ def filter_speakers(configs):
     for i in range(len(unique_speakers)):
         spk2id_map[unique_speakers[i]] = i
     
-    print(f"Found {len(spk2id_map.keys())} unique speakers, skipping {ignore}...")
+    print(f"> Found {len(spk2id_map.keys())} unique speakers, skipping {ignore}...")
 
     train_spk_ids = []
     test_spk_ids = []
@@ -130,7 +134,7 @@ class VCTKAngleProtoData(data.Dataset):
         
         train_files, train_spk_ids, test_files, test_spk_ids, spk2id_map = filter_speakers(config)
 
-        assert config.model.num_speakers*configs.model.num_utter == config.data.batch_size
+        assert config.model.num_speakers*config.model.num_utter == config.trainer.batch_size
         #map speakers to files 
 
         spk2file_map = {s:[] for s in spk2id_map}
@@ -140,8 +144,14 @@ class VCTKAngleProtoData(data.Dataset):
                 if s in f:
                     spk2file_map[s].append(f)
         
-        train_arranged = []
         speakers = list(spk2file_map.keys())
+
+        for k in speakers:
+            if k in list(config.data.test_partition):
+                del spk2file_map[k]
+
+        speakers = list(spk2file_map.keys())
+        train_arranged = []
 
         while len(speakers)>0:
             #Check if all speakers have enough utters
@@ -156,6 +166,8 @@ class VCTKAngleProtoData(data.Dataset):
                 spk = random.choice(speakers)
                 utters = []
                 for i in range(config.model.num_utter):
+                    if len(spk2file_map[spk])==0:
+                        break
                     utters.append(spk2file_map[spk][0])
                     spk2file_map[spk].pop(0)
                 train_arranged.extend(utters)

@@ -21,11 +21,11 @@ class Trainer():
               
         model = model.to(device)
 
-        for batch in train_loader:
-            x = batch['x'].to(device)
-            p = batch['p'].to(device)
-            out = model(x, p)
-            print(out.shape)
+        if self.config.model.model_name=='speaker_encoder':
+            for batch in train_loader:
+                x = batch['x'].to(device)
+                out = model(x)
+                print("angle proto", out.shape)
 
     
     def inference(self):
