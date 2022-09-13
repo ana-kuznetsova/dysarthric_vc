@@ -17,6 +17,8 @@ def run_training(config):
     #wandb configs
     if config.runner.wandb:
         wandb.init(project=config.runner.project_name, entity=config.runner.entity)
+        wandb.run.name = config.runner.run_name
+        print(f"> Initialized run with run name {config.runner.run_name}")
     if config.runner.log_config:
         wandb.config = config
 

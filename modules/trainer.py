@@ -50,10 +50,10 @@ class Trainer():
                     optimizer.step()
                     scheduler.step()
                     step+=1
-                    if step%2000==0:
+                    if step%500==0:
                         print(f"> Train loss after {step} steps")
-                        print(f'>[Loss]:{loss.data:.5f}')
-                        if config.runner.wandb:
+                        print(f'> [Loss]:{loss.data:.5f}')
+                        if self.config.runner.wandb:
                             wandb.log({"train_loss": loss})
 
                 ##Validation loop
@@ -68,7 +68,7 @@ class Trainer():
                 val_loss = val_loss/len(val_loader)
                 print(f"> Val loss after {ep} epochs")
                 print(f'> [Loss]:{val_loss:.5f}')
-                if config.runner.wandb:
+                if self.config.runner.wandb:
                     wandb.log({"val_loss": loss})
                 if val_loss < prev_val_loss:
                     #Save checkpoint and lr_sched state

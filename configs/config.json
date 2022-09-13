@@ -22,10 +22,11 @@
         "hidden_dim":128
     },
     "runner":{
-        "wandb":false,
+        "wandb":true,
         "project_name": "dysarthric_vc",
+        "run_name":"spk_encoder_1",
         "entity":"anakuzne", 
-        "log_config":false,
+        "log_config":true,
         "data_parallel":true,
         "cuda_device":[0, 1],
         "ckpt_path":"/home/anakuzne/exp/spk_encoder"
