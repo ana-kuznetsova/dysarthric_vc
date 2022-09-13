@@ -26,7 +26,8 @@
         "project_name": "dysarthric_vc",
         "entity":"anakuzne", 
         "log_config":false,
-        "cuda_device":[4, 5],
+        "data_parallel":true,
+        "cuda_device":[0, 1],
         "ckpt_path":"/home/anakuzne/exp/spk_encoder"
     }
 }

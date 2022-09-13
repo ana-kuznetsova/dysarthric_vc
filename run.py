@@ -19,12 +19,6 @@ def run_training(config):
         wandb.init(project=config.runner.project_name, entity=config.runner.entity)
     if config.runner.log_config:
         wandb.config = config
-        #wandb.log({"loss": loss})
-
-    
-    #Cuda settings
-    device = config.runner.cuda_device
-
 
     ##Preload data
     if config.data.dataset=='LibriTTS':
@@ -48,7 +42,6 @@ def run_training(config):
         
         train = Subset(dataset, train_ind)
         val = Subset(dataset, val_ind)
-        print(f"train {len(train)}, val {len(val)}")
 
         train_loader = DataLoader(train,
                                 batch_size=config.trainer.batch_size, 
@@ -107,7 +100,7 @@ def run_training(config):
     trainer.train(train_loader, val_loader, 
                   model, criterion,
                   optimizer, lr_scheduler, 
-                  device)
+                  device="cuda", parallel=config.runner.data_parallel)
 
 if __name__ == "__main__":
     config = load_config(sys.argv[1])
