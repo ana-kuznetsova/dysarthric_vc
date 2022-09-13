@@ -68,6 +68,8 @@ class Trainer():
                 val_loss = val_loss/len(val_loader)
                 print(f"> Val loss after {ep} epochs")
                 print(f'> [Loss]:{val_loss:.5f}')
+                if config.runner.wandb:
+                    wandb.log({"val_loss": loss})
                 if val_loss < prev_val_loss:
                     #Save checkpoint and lr_sched state
                     torch.save(model.state_dict(), os.path.join(self.config.runner.ckpt_path, "best_model.pth"))
