@@ -221,3 +221,23 @@ def collate_fn(data):
 
 
     return {"x":torch.stack(padded_mels), "p": torch.stack(padded_pitch), "spk_id":batch_speakers}
+
+
+def collate_spk_enc(data):
+    '''
+    For batch
+    '''
+    mel_specs = []
+
+    for fname in data:
+        wav, fs = librosa.load(fname[0], sr=16000)
+        spec = librosa.feature.melspectrogram(y=wav, sr=fs, n_mels=80)
+        mel_specs.append(torch.Tensor(spec))
+    
+    maxlen_mel = max([i.shape[-1] for i in mel_specs])
+    padded_mels = [nn.ZeroPad2d(padding=(0, maxlen_mel - i.shape[-1], 0, 0))(i) for i in mel_specs]
+    
+    batch_speakers = torch.Tensor([i[1] for i in data]).long()
+
+
+    return {"x":torch.stack(padded_mels), "spk_id":batch_speakers}

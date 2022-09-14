@@ -24,7 +24,7 @@
     "runner":{
         "wandb":true,
         "project_name": "dysarthric_vc",
-        "run_name":"spk_encoder_1",
+        "run_name":"spk_encoder_2",
         "entity":"anakuzne", 
         "log_config":true,
         "data_parallel":true,

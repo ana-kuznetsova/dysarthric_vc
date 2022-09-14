@@ -3,6 +3,7 @@ import json
 import torch
 import sys
 import os
+import wandb
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
 
@@ -33,7 +34,8 @@ class Trainer():
             print(f"> Using CUDA {devices}")
             model = model.to(device)
             model = torch.nn.DataParallel(model, device_ids=devices)
-
+        
+        print(next(model.parameters()).is_cuda)
         if self.config.model.model_name=='speaker_encoder':
             ep = 0
             step = 0
@@ -46,9 +48,10 @@ class Trainer():
                     out = model(x)
                     out = out.view(self.config.model.num_speakers, self.config.model.num_utter, self.config.model.feat_encoder_dim)
                     loss = criterion(out)
+                    #print(f"loss:", loss.data)
                     loss.backward()
                     optimizer.step()
-                    scheduler.step()
+                    #scheduler.step()
                     step+=1
                     if step%500==0:
                         print(f"> Train loss after {step} steps")
@@ -73,7 +76,7 @@ class Trainer():
                 if val_loss < prev_val_loss:
                     #Save checkpoint and lr_sched state
                     torch.save(model.state_dict(), os.path.join(self.config.runner.ckpt_path, "best_model.pth"))
-                    torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, "scheduler.pth"))
+                    #torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, "scheduler.pth"))
                     torch.save(optimizer.state_dict(), os.path.join(self.config.runner.ckpt_path, "optimizer.pth"))
                 prev_val_loss = val_loss
                 ep+=1
