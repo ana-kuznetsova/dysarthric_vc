@@ -5,8 +5,6 @@ import sys
 import os
 import wandb
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
-
 class Trainer():
     def __init__(self, configs):
         super(Trainer, self).__init__()
@@ -48,7 +46,6 @@ class Trainer():
                     out = model(x)
                     out = out.view(self.config.model.num_speakers, self.config.model.num_utter, self.config.model.feat_encoder_dim)
                     loss = criterion(out)
-                    #print(f"loss:", loss.data)
                     loss.backward()
                     optimizer.step()
                     #scheduler.step()

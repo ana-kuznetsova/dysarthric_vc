@@ -103,7 +103,7 @@ def run_training(config):
     trainer.train(train_loader, val_loader, 
                   model, criterion,
                   optimizer, None, 
-                  device="cuda:0", parallel=config.runner.data_parallel)
+                  device=torch.device("cuda:0"), parallel=config.runner.data_parallel)
 
 if __name__ == "__main__":
     config = load_config(sys.argv[1])
