@@ -1,10 +1,11 @@
 from utils.data import LibriTTSData, collate_fn, collate_spk_enc, load_config, VCTKData, VCTKAngleProtoData
 from modules.encoder import GeneralEncoder
 from modules.trainer import Trainer
+from modules.losses import EncLossGeneral
 
 from torch.utils.data import random_split, DataLoader
 from TTS.encoder.models.resnet import ResNetSpeakerEncoder
-from TTS.encoder.losses import AngleProtoLoss
+from TTS.encoder.losses import AngleProtoLoss, SoftmaxAngleProtoLoss
 from torch.utils.data import Subset
 import torch
 
@@ -86,7 +87,7 @@ def run_training(config):
 
     if config.model.model_name=='speaker_encoder':
         model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
-        criterion = AngleProtoLoss()
+        criterion = SoftmaxAngleProtoLoss(embedding_dim=config.model.feat_encoder_dim, n_speakers=config.data.num_speakers)
         optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
         #optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)
         if config.trainer.scheduler:
@@ -100,7 +101,7 @@ def run_training(config):
                 feature_extractor=feat_extractor,
                 feat_extractor_dim=config.model.feat_encoder_dim,
                 hidden_dim=config.model.hidden_dim, 
-                batch_size=config.trainer.batch_size)
+                batch_size=config.trainer.batch_size, num_speakers=config.data.num_speakers)
 
     trainer = Trainer(config)
     trainer.train(train_loader, val_loader, 

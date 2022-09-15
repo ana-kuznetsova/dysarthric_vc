@@ -76,4 +76,4 @@ class EncLossGeneral(nn.Module):
         loss_1 = self.alpha1*self.rc_loss(feats, rc_feats)
         loss_2 = self.alpha2*self.spk_ce_loss(cls_out, cls_target)
         total_loss = loss_1 + loss_2
-        return total_loss
+        return total_loss, loss_1, loss_2
