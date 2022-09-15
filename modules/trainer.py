@@ -33,13 +33,13 @@ class Trainer():
             model = model.to(device)
             model = torch.nn.DataParallel(model, device_ids=devices)
         
-        print(next(model.parameters()).is_cuda)
         if self.config.model.model_name=='speaker_encoder':
             ep = 0
             step = 0
             prev_val_loss = 0
             while ep < self.config.trainer.epoch:
                 print(f"Starting [epoch]:{ep+1}/{self.config.trainer.epoch}")
+                epoch_train_loss = 0
                 for batch in train_loader:
                     x = batch['x'].to(device)
                     optimizer.zero_grad()
@@ -48,13 +48,15 @@ class Trainer():
                     loss = criterion(out)
                     loss.backward()
                     optimizer.step()
-                    #scheduler.step()
+                    if scheduler:
+                        scheduler.step()
                     step+=1
-                    if step%500==0:
-                        print(f"> Train loss after {step} steps")
-                        print(f'> [Loss]:{loss.data:.5f}')
-                        if self.config.runner.wandb:
-                            wandb.log({"train_loss": loss})
+                    epoch_train_loss+=loss.data
+                epoch_train_loss/=len(train_loader)
+
+                print(f'> [Epoch]:{ep+1} [Train Loss]:{epoch_train_loss.data}')
+                if self.config.runner.wandb:
+                    wandb.log({"train_loss": epoch_train_loss.data})
 
                 ##Validation loop
                 val_loss = 0
@@ -65,15 +67,16 @@ class Trainer():
                         out = out.view(self.config.model.num_speakers, self.config.model.num_utter, self.config.model.feat_encoder_dim)
                         loss = criterion(out)
                         val_loss+=loss.data
+
                 val_loss = val_loss/len(val_loader)
-                print(f"> Val loss after {ep} epochs")
-                print(f'> [Loss]:{val_loss:.5f}')
+                print(f'> [Epoch]:{ep+1} [Valid Loss]:{val_loss.data}')
                 if self.config.runner.wandb:
-                    wandb.log({"val_loss": loss})
+                    wandb.log({"val_loss": val_loss})
                 if val_loss < prev_val_loss:
                     #Save checkpoint and lr_sched state
                     torch.save(model.state_dict(), os.path.join(self.config.runner.ckpt_path, "best_model.pth"))
-                    #torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, "scheduler.pth"))
+                    if scheduler:
+                        torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, "scheduler.pth"))
                     torch.save(optimizer.state_dict(), os.path.join(self.config.runner.ckpt_path, "optimizer.pth"))
                 prev_val_loss = val_loss
                 ep+=1

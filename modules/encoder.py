@@ -42,7 +42,10 @@ class GeneralEncoder(nn.Module):
                                    hidden_dim, hidden_dim)
         self.pitch_predictor = nn.GRU(input_size=1, hidden_size=hidden_dim, 
                                       num_layers=1)
-        self.reconstructor = nn.Linear(hidden_dim*2, feat_extractor_dim)
+        #Predicts everything else other than pitch or speaker ID
+        self.attr_predictor = MLP(feat_extractor_dim, 
+                                   hidden_dim, hidden_dim)
+        self.reconstructor = nn.Linear(hidden_dim*3, feat_extractor_dim)
         
 
 
@@ -54,6 +57,7 @@ class GeneralEncoder(nn.Module):
         pitch_inp = torch.transpose(pitch_inp, 0, 1).unsqueeze(2)
         out, h_n = self.pitch_predictor(pitch_inp)
         pitch_embed = h_n.squeeze(0)
-        concat_embed = torch.cat((spk_embed, pitch_embed), dim=1)
+        attr_embed = F.leaky_relu(feats)
+        concat_embed = torch.cat((spk_embed, pitch_embed, attr_embed), dim=1)
         proj = self.reconstructor(concat_embed)
         return feats, proj

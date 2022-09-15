@@ -12,7 +12,9 @@
         "epoch":10000,
         "batch_size":32,
         "ckpt": null,
-        "data_parallel": true
+        "data_parallel": true,
+        "scheduler":false,
+        "lr":0.0001
     },
     "model":{
         "model_name":"speaker_encoder",
@@ -24,10 +26,10 @@
     "runner":{
         "wandb":true,
         "project_name": "dysarthric_vc",
-        "run_name":"spk_encoder_4",
+        "run_name":"spk_encoder_no_sched",
         "entity":"anakuzne", 
         "log_config":true,
-        "data_parallel":true,
+        "data_parallel":false,
         "cuda_device":[0, 1],
         "ckpt_path":"/home/anakuzne/exp/spk_encoder"
     }

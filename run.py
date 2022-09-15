@@ -87,9 +87,12 @@ def run_training(config):
     if config.model.model_name=='speaker_encoder':
         model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
         criterion = AngleProtoLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+        optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
         #optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)
-        #lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.25)
+        if config.trainer.scheduler:
+            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.25)
+        else:
+            lr_scheduler = None
 
     elif config.model.model_name=='general_encoder':
         feat_extractor = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
@@ -102,7 +105,7 @@ def run_training(config):
     trainer = Trainer(config)
     trainer.train(train_loader, val_loader, 
                   model, criterion,
-                  optimizer, None, 
+                  optimizer, lr_scheduler, 
                   device=torch.device("cuda:0"), parallel=config.runner.data_parallel)
 
 if __name__ == "__main__":
