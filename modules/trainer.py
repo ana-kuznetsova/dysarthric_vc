@@ -68,9 +68,10 @@ class Trainer():
                 with torch.no_grad():
                     for batch in val_loader:
                         x = batch['x'].to(device)
-                        out = model(x)
+                        spk_true = batch['spk_id'].to(device)
+                        out = model(x, l2_norm=True)
                         out = out.view(self.config.model.num_speakers, self.config.model.num_utter, self.config.model.feat_encoder_dim)
-                        loss = criterion(out)
+                        loss = criterion(out, spk_true)
                         val_loss+=loss.data
 
                 val_loss = val_loss/len(val_loader)
