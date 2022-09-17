@@ -43,6 +43,13 @@ class Trainer():
             step = 0
             prev_val_loss = 0
             criterion = criterion.to(device)
+
+            if self.config.data.augment:
+                num_speakers = self.config.model.num_speakers*3
+                num_utter = self.config.model.num_utter*3
+            else:
+                num_speakers = self.config.model.num_speakers
+                num_utter = self.config.model.num_utter
             while ep < self.config.trainer.epoch:
                 print(f"Starting [epoch]:{ep+1}/{self.config.trainer.epoch}")
                 epoch_train_loss = 0
@@ -51,7 +58,7 @@ class Trainer():
                     spk_true = batch['spk_id'].to(device)
                     optimizer.zero_grad()
                     out = model(x, l2_norm=True)
-                    out = out.view(self.config.model.num_speakers, self.config.model.num_utter, self.config.model.feat_encoder_dim)
+                    out = out.view(num_speakers, num_utter, self.config.model.feat_encoder_dim)
                     loss = criterion(out, spk_true)
                     loss.backward()
                     optimizer.step()
@@ -70,7 +77,7 @@ class Trainer():
                         x = batch['x'].to(device)
                         spk_true = batch['spk_id'].to(device)
                         out = model(x, l2_norm=True)
-                        out = out.view(self.config.model.num_speakers, self.config.model.num_utter, self.config.model.feat_encoder_dim)
+                        out = out.view(num_speakers, num_utter, self.config.model.feat_encoder_dim)
                         loss = criterion(out, spk_true)
                         val_loss+=loss.data
 

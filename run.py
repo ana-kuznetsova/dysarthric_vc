@@ -1,4 +1,4 @@
-from utils.data import LibriTTSData, collate_fn, collate_spk_enc, load_config, VCTKData, VCTKAngleProtoData
+from utils.data import LibriTTSData, collate_fn, collate_spk_enc, load_config, VCTKData, VCTKAngleProtoData, collate_spk_enc_augment
 from modules.encoder import GeneralEncoder
 from modules.trainer import Trainer
 from modules.losses import EncLossGeneral
@@ -46,14 +46,19 @@ def run_training(config):
         train = Subset(dataset, train_ind)
         val = Subset(dataset, val_ind)
 
+        if config.data.augment:
+            collate_fn = collate_spk_enc_augment
+        else:
+            collate_fn = collate_spk_enc
+
         train_loader = DataLoader(train,
                                 batch_size=config.trainer.batch_size, 
-                                shuffle=False, collate_fn=collate_spk_enc,
+                                shuffle=False, collate_fn=collate_fn,
                                 drop_last=True, num_workers=2
                             )
         val_loader = DataLoader(val,
                                     batch_size=config.trainer.batch_size, 
-                                    shuffle=False, collate_fn=collate_spk_enc,
+                                    shuffle=False, collate_fn=collate_fn,
                                     drop_last=True, num_workers=2
                                 )
 

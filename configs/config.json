@@ -8,8 +8,7 @@
         "feature": "melspec",
         "feature_dim":80,
         "pitch":true,
-        "augment":true,
-        "audment_data_path":"/data/common/musan"
+        "augment":true
     },
     "trainer":{
         "epoch":10000,
