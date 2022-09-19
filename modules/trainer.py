@@ -45,7 +45,7 @@ class Trainer():
             criterion = criterion.to(device)
 
             if self.config.data.augment:
-                num_speakers = self.config.model.num_speakers*3
+                num_speakers = self.config.model.num_speakers
                 num_utter = self.config.model.num_utter*3
             else:
                 num_speakers = self.config.model.num_speakers
@@ -57,13 +57,17 @@ class Trainer():
                     x = batch['x'].to(device)
                     spk_true = batch['spk_id'].to(device)
                     optimizer.zero_grad()
-                    out = model(x, l2_norm=True)
-                    out = out.view(num_speakers, num_utter, self.config.model.feat_encoder_dim)
+                    mini_steps = x.shape[0] // self.config.trainer.batch_size
+                    outputs = torch.zeros(x.shape[0], self.config.model.feat_encoder_dim).to(device)
+                    for mini_batch_idx in range(mini_steps):
+                        start = mini_batch_idx*self.config.trainer.batch_size
+                        end = min(start + self.config.trainer.batch_size, x.shape[0])
+                        x_mini = x[start:end]
+                        outputs[start:end,:] = model(x_mini, l2_norm=True)
+                    out = outputs.view(num_speakers, num_utter, self.config.model.feat_encoder_dim)
                     loss = criterion(out, spk_true)
                     loss.backward()
                     optimizer.step()
-                    if scheduler:
-                        scheduler.step()
                     step+=1
                     epoch_train_loss+=loss.data
                 epoch_train_loss/=len(train_loader)
@@ -71,13 +75,15 @@ class Trainer():
                 print(f'> [Epoch]:{ep+1} [Train Loss]:{epoch_train_loss.data}')
 
                 ##Validation loop
+                val_num_utter = self.config.model.num_utter
                 val_loss = 0
+                val_change = True
                 with torch.no_grad():
                     for batch in val_loader:
                         x = batch['x'].to(device)
                         spk_true = batch['spk_id'].to(device)
                         out = model(x, l2_norm=True)
-                        out = out.view(num_speakers, num_utter, self.config.model.feat_encoder_dim)
+                        out = out.view(num_speakers, val_num_utter, self.config.model.feat_encoder_dim)
                         loss = criterion(out, spk_true)
                         val_loss+=loss.data
 
@@ -91,6 +97,10 @@ class Trainer():
                     if scheduler:
                         torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, "scheduler.pth"))
                     torch.save(optimizer.state_dict(), os.path.join(self.config.runner.ckpt_path, "optimizer.pth"))
+                else:
+                    if scheduler:
+                        scheduler.step()
+                    
                 prev_val_loss = val_loss
                 ep+=1
 

@@ -286,7 +286,7 @@ def augment(fname):
             if '.wav' in fpath:
                 musan_files.append(fpath)
 
-    orig_wav, fs = librosa.load(fname, sr=16000)
+    orig_wav, fs = librosa.load(fname[0], sr=16000)
 
     return_values = []
     for i in range(2):
@@ -317,7 +317,7 @@ def collate_spk_enc_augment(data):
     
     batch_speakers = []
     for i in data:
-        i = i[1]*3
+        i = [i[1]]*3
         batch_speakers.extend(i)
     batch_speakers = torch.Tensor(batch_speakers).long()
     return {"x":torch.stack(padded_mels), "spk_id":batch_speakers}

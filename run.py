@@ -47,18 +47,18 @@ def run_training(config):
         val = Subset(dataset, val_ind)
 
         if config.data.augment:
-            collate_fn = collate_spk_enc_augment
+            collate_fn_enc = collate_spk_enc_augment
         else:
-            collate_fn = collate_spk_enc
+            collate_fn_enc = collate_spk_enc
 
         train_loader = DataLoader(train,
                                 batch_size=config.trainer.batch_size, 
-                                shuffle=False, collate_fn=collate_fn,
+                                shuffle=False, collate_fn=collate_fn_enc,
                                 drop_last=True, num_workers=2
                             )
         val_loader = DataLoader(val,
                                     batch_size=config.trainer.batch_size, 
-                                    shuffle=False, collate_fn=collate_fn,
+                                    shuffle=False, collate_fn=collate_spk_enc,
                                     drop_last=True, num_workers=2
                                 )
 
@@ -93,10 +93,10 @@ def run_training(config):
     if config.model.model_name=='speaker_encoder':
         model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
         criterion = SoftmaxAngleProtoLoss(embedding_dim=config.model.feat_encoder_dim, n_speakers=config.data.num_speakers)
-        optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
-        #optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)
+        #optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)
         if config.trainer.scheduler:
-            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.25)
+            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.25)
         else:
             lr_scheduler = None
 
