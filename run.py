@@ -11,9 +11,10 @@ import torch
 
 import wandb
 import sys
+import json
 
 
-def run_training(config):
+def run_training(config, config_path):
 
     #wandb configs
     if config.runner.wandb:
@@ -21,7 +22,9 @@ def run_training(config):
         wandb.run.name = config.runner.run_name
         print(f"> Initialized run with run name {config.runner.run_name}")
     if config.runner.log_config:
-        wandb.config = config
+        with open(config_path, 'r') as fo:
+            config_json = json.load(fo)
+        wandb.config = config_json
 
     ##Preload data
     if config.data.dataset=='LibriTTS':
@@ -54,12 +57,12 @@ def run_training(config):
         train_loader = DataLoader(train,
                                 batch_size=config.trainer.batch_size, 
                                 shuffle=False, collate_fn=collate_fn_enc,
-                                drop_last=True, num_workers=2
+                                drop_last=True, num_workers=2, pin_memory=False
                             )
         val_loader = DataLoader(val,
                                     batch_size=config.trainer.batch_size, 
                                     shuffle=False, collate_fn=collate_spk_enc,
-                                    drop_last=True, num_workers=2
+                                    drop_last=True, num_workers=2, pin_memory=False
                                 )
 
     else:
@@ -73,12 +76,12 @@ def run_training(config):
         train_loader = DataLoader(train,
                                     batch_size=self.batch_size, 
                                     shuffle=True, collate_fn=collate_fn,
-                                    drop_last=True, num_workers=2
+                                    drop_last=True, num_workers=2, pin_memory=False
                                 )
         val_loader = DataLoader(val,
                                     batch_size=self.batch_size, 
                                     shuffle=True, collate_fn=collate_fn,
-                                    drop_last=True, num_workers=2
+                                    drop_last=True, num_workers=2, pin_memory=False
                                 )
 
 
@@ -116,4 +119,4 @@ def run_training(config):
 
 if __name__ == "__main__":
     config = load_config(sys.argv[1])
-    run_training(config)
+    run_training(config, sys.argv[1])

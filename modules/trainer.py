@@ -1,4 +1,4 @@
-from distutils.command.config import config
+from utils.utils import restore
 import json
 import torch
 import sys
@@ -21,7 +21,7 @@ class Trainer():
               scheduler,
               device, 
               parallel=False):
-        
+
 
         if not parallel:
             print(f"> Using CUDA {device}")
@@ -32,7 +32,10 @@ class Trainer():
             print(f"> Using CUDA {devices}")
             model = model.to(device)
             model = torch.nn.DataParallel(model, device_ids=devices)
-        
+
+        ###Restore from checkpoint if exists
+        if os.listdir(self.config.runner.ckpt_path):
+            restore(self.config, model, optimizer, scheduler)
 
         ########################################
         #######Speaker Encoder Training#########
@@ -42,6 +45,7 @@ class Trainer():
             ep = 0
             step = 0
             prev_val_loss = 0
+            val_count = 0
             criterion = criterion.to(device)
 
             if self.config.data.augment:
@@ -98,10 +102,25 @@ class Trainer():
                         torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, "scheduler.pth"))
                     torch.save(optimizer.state_dict(), os.path.join(self.config.runner.ckpt_path, "optimizer.pth"))
                 else:
+                    val_count+=1
+                
+                if val_count>=5:
                     if scheduler:
                         scheduler.step()
+                    val_count=0
                     
                 prev_val_loss = val_loss
+
+                if ep%5==0:
+                    sched_path = f"scheduler_{ep}.pth"
+                    opt_path = f"optimizer_{ep}.pth"
+                    model_path = f"model_{ep}.pth"
+
+                    torch.save(model.state_dict(), os.path.join(self.config.runner.ckpt_path, model_path))
+                    torch.save(optimizer.state_dict(), os.path.join(self.config.runner.ckpt_path, opt_path))
+                    if scheduler:
+                        torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, sched_path))
+
                 ep+=1
 
 
