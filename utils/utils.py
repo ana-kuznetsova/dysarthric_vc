@@ -7,21 +7,26 @@ def find(files, num, obj):
         if num in f and obj in f:
             return f
 
-def restore(conf, model, optimizer, scheduler=None):
+def restore(conf, model, optimizer=None, scheduler=None, mode='train'):
     path = conf.runner.ckpt_path
     files = os.listdir(path)
 
-    latest = sorted([int(f.split('_')[-1].replace('.pth', '')) for f in files])[-1]
-    latest = str(latest)
-    print(f"> Restoring from epoch {latest}...")
+    if mode=='train':
+        latest = sorted([int(f.split('_')[-1].replace('.pth', '')) for f in files])[-1]
+        latest = str(latest)
+        print(f"> Restoring from epoch {latest}...")
 
-    model_path = os.path.join(path, find(files, latest, "model"))
-    opt_path = os.path.join(path, find(files, latest, "optimizer"))
-    if scheduler:
-        sched_path = os.path.join(path, find(files, latest, "scheduler"))
+        model_path = os.path.join(path, find(files, latest, "model"))
+        opt_path = os.path.join(path, find(files, latest, "optimizer"))
+        if scheduler:
+            sched_path = os.path.join(path, find(files, latest, "scheduler"))
 
+        
+        model = model.load_state_dict(torch.load(model_path))
+        optimizer = optimizer.load_state_dict(torch.load(opt_path))
+        if scheduler:
+            scheduler = scheduler.load_state_dict(torch.load(sched_path))
     
-    model = model.load_state_dict(torch.load(model_path))
-    optimizer = optimizer.load_state_dict(torch.load(opt_path))
-    if scheduler:
-        scheduler = scheduler.load_state_dict(torch.load(sched_path))
+    else:
+        model_path = os.path.join(path, f"best_model.pth")
+        model = model.load_state_dict(torch.load(model_path))
