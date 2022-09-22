@@ -30,3 +30,21 @@ def restore(conf, model, optimizer=None, scheduler=None, mode='train'):
     else:
         model_path = os.path.join(path, f"best_model.pth")
         model = model.load_state_dict(torch.load(model_path))
+
+
+def move_device(model_weights):
+    '''
+    Removes module prefix to load DatParallel model on single device
+    '''
+
+    new_weights = {}
+
+    for k in model_weights:
+        new_k = k.replace("module.", '')
+        new_weights[new_k] = model_weights[k]
+    return new_weights
+
+def freeze_params(model, layers=None):
+    if not layers:
+        for param in model.parameters():
+            param.requires_grad = False

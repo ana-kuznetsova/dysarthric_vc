@@ -108,7 +108,7 @@ class VCTKData(data.Dataset):
         self.mode = mode
         self.data_path = config.data.dataset_path
         
-        train_files, train_spk_ids, test_files, test_spk_ids, spk2id_map = filter_speakers(configs)
+        train_files, train_spk_ids, test_files, test_spk_ids, spk2id_map = filter_speakers(config)
         self.train_files = train_files
         self.train_spk_ids = train_spk_ids
         self.test_files = test_files

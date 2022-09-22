@@ -36,7 +36,7 @@ class Trainer():
             model = torch.nn.DataParallel(model, device_ids=devices)
 
         ###Restore from checkpoint if exists
-        if os.listdir(self.config.runner.ckpt_path):
+        if os.path.exists(self.config.runner.ckpt_path) and os.listdir(self.config.runner.ckpt_path):
             restore(self.config, model, optimizer, scheduler)
 
         ########################################

@@ -1,14 +1,14 @@
 {   "data":{
         "dataset":"VCTK",
-        "dataset_path":"/data/common/vctk/test",
+        "dataset_path":"/data/common/vctk/wav48_silence_trimmed",
         "train_partition":null,
-        "test_partition":["p228"],
+        "test_partition":["p225", "p228", "p229", "p343", "p226", "p227", "p311", "p363"],
         "ignore_speakers":["s5"],
         "num_speakers":109,
         "feature": "melspec",
         "feature_dim":80,
         "pitch":true,
-        "augment":true
+        "augment":false
     },
     "trainer":{
         "epoch":10000,
@@ -23,13 +23,14 @@
         "feat_encoder_dim":512,
         "num_speakers":4,
         "num_utter":8,
-        "hidden_dim":128, 
-        "feat_extractor":"speaker_encoder"
+        "hidden_dim":128,
+        "feat_extractor":"speaker_encoder",
+        "freeze_spk_enc":true
     },
     "runner":{
         "wandb":false,
         "project_name": "dysarthric_vc",
-        "run_name":"spk_encoder_l2_norm_step3_soft_ap",
+        "run_name":"attr_encoder_frozen_extractor",
         "entity":"anakuzne", 
         "log_config":true,
         "data_parallel":true,

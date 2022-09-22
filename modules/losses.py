@@ -2,9 +2,6 @@ import torch
 from torch import nn
 from  torch.nn import functional as F
 
-
-
-
 class CLUB(nn.Module):  # CLUB: Mutual Information Contrastive Learning Upper Bound
     '''
     Taken from the original implementation of CLUB at
