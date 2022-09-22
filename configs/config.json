@@ -26,7 +26,7 @@
         "hidden_dim":128
     },
     "runner":{
-        "wandb":true,
+        "wandb":false,
         "project_name": "dysarthric_vc",
         "run_name":"spk_encoder_l2_norm_step10_soft_ap_augment1",
         "entity":"anakuzne", 

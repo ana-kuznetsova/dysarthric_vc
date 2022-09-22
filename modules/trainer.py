@@ -5,6 +5,7 @@ import sys
 import os
 import wandb
 import numpy as np
+from tqdm import tqdm
 
 class Trainer():
     def __init__(self, configs):
@@ -187,7 +188,7 @@ class Trainer():
                 ep+=1
 
 
-    def inference(self, train_loader, test_loader, model, device, parallel=False, out_dir='./'):
+    def inference(self, test_loader, model, device, parallel=False, out_dir='./'):
 
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
@@ -208,38 +209,12 @@ class Trainer():
         if self.config.model.model_name=='speaker_encoder':
             save_output = None
             save_spk = None
-
-            print(f"> Generating training data...")
-            for batch in train_loader:
-                x = batch['x'].to(device)
-                spk_true = batch['spk_id']
-                mini_steps = x.shape[0] // self.config.trainer.batch_size
-                outputs = torch.zeros(x.shape[0], self.config.model.feat_encoder_dim).to(device)
-                for mini_batch_idx in range(mini_steps):
-                    start = mini_batch_idx*self.config.trainer.batch_size
-                    end = min(start + self.config.trainer.batch_size, x.shape[0])
-                    x_mini = x[start:end]
-                    outputs[start:end,:] = model(x_mini, l2_norm=True)
-                
-                outputs = outputs.detach().cpu().numpy()
-                spk_true= spk_true.numpy()
-
-                if not save_output:
-                    save_output = outputs
-                    save_spk = spk_true
-                else:
-                    save_output = np.concatenate([save_output, outputs], axis=0)
-                    save_spk = np.concatenate([save_spk, spk_true], axis=0)
-
-                
-            np.save(os.path.join(out_dir, 'X_train.npy'), save_output)
-            np.save(os.path.join(out_dir, 'Y_train.npy'), save_spk)
-
-            save_output = None
-            save_spk = None
             
+            print("Generating test data...")
+            for i, batch in enumerate(test_loader):
+                if i%200==0:
+                    print(f"> [Step:]{i + 1}/{len(test_loader)}")
 
-            for batch in test_loader:
                 x = batch['x'].to(device)
                 spk_true = batch['spk_id']
                 mini_steps = x.shape[0] // self.config.trainer.batch_size
@@ -253,14 +228,14 @@ class Trainer():
                 outputs = outputs.detach().cpu().numpy()
                 spk_true = spk_true.numpy()
 
-                if not save_output:
+                if i==0:
                     save_output = outputs
                     save_spk = spk_true
                 else:
                     save_output = np.concatenate([save_output, outputs], axis=0)
                     save_spk = np.concatenate([save_spk, spk_true], axis=0)
 
-            np.save(os.path.join(out_dir, 'X_test.npy'), save_output)
-            np.save(os.path.join(out_dir, 'Y_test.npy'), save_spk)
+            np.save(os.path.join(out_dir, 'X.npy'), save_output)
+            np.save(os.path.join(out_dir, 'Y.npy'), save_spk)
 
             print(f'Saved inference results at {out_dir}')

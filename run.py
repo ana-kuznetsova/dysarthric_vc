@@ -2,6 +2,7 @@ from utils.data import LibriTTSData, collate_fn, collate_spk_enc, load_config, V
 from modules.encoder import GeneralEncoder
 from modules.trainer import Trainer
 from modules.losses import EncLossGeneral
+from utils.eval import evaluate
 
 from torch.utils.data import random_split, DataLoader
 from TTS.encoder.models.resnet import ResNetSpeakerEncoder
@@ -121,13 +122,7 @@ def run_training(config, config_path):
 def run_inference(config, out_dir):
 
     if config.data.dataset=='VCTK' and config.model.model_name=='speaker_encoder':
-        dataset_train = VCTKAngleProtoData(config, mode='train')
         dataset_test = VCTKAngleProtoData(config, mode='test')
-
-        train_loader = DataLoader(dataset_train, batch_size=config.trainer.batch_size, 
-                                    shuffle=False, collate_fn=collate_spk_enc,
-                                    drop_last=True, num_workers=2, pin_memory=False
-                                )
         test_loader = DataLoader(dataset_test, batch_size=config.trainer.batch_size, 
                                     shuffle=False, collate_fn=collate_spk_enc,
                                     drop_last=True, num_workers=2, pin_memory=False
@@ -136,7 +131,7 @@ def run_inference(config, out_dir):
         model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
 
         trainer = Trainer(config)
-        trainer.inference(train_loader, test_loader, model, 
+        trainer.inference(test_loader, model, 
                          device=torch.device("cuda:0"), 
                          parallel=config.runner.data_parallel,
                          out_dir=out_dir)
@@ -144,17 +139,22 @@ def run_inference(config, out_dir):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("config", nargs=1, type=str, help='Path to config .json')
+    parser.add_argument("config", type=str, help='Path to config .json')
     parser.add_argument("-m", "--mode", type=str, help='Train, inference, test')
     parser.add_argument("-o", "--out", help="Path to the inference output")
+    parser.add_argument("-i", "--inp", help="Path to the input dir")
     args = parser.parse_args()
 
 
-    config = load_config(args[1])
+    config = load_config(args.config)
 
     if args.mode=='train':
-        run_training(config, args[1])
+        run_training(config, args.config)
 
     if args.mode=='inference':
         assert args.out!=None
         run_inference(config, args.out)
+
+    if args.mode=='test':
+        assert args.inp!=None
+        evaluate(args.inp, 'speaker_encoder')
