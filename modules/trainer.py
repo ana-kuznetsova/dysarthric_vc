@@ -36,7 +36,7 @@ class Trainer():
             model = torch.nn.DataParallel(model, device_ids=devices)
 
         ###Restore from checkpoint if exists
-        if os.path.exists(self.config.runner.ckpt_path) and os.listdir(self.config.runner.ckpt_path):
+        if (os.path.exists(self.config.runner.ckpt_path)) and (len(os.listdir(self.config.runner.ckpt_path))>0):
             restore(self.config, model, optimizer, scheduler)
 
         ########################################
@@ -136,7 +136,7 @@ class Trainer():
             prev_val_loss = 0
             while ep < self.config.trainer.epoch:
                 print(f"Starting [epoch]:{ep+1}/{self.config.trainer.epoch}")
-                epoch_train_loss_total = 0
+                epoch_train_loss = 0
                 epoch_train_loss_1 = 0
                 epoch_train_loss_2 = 0
                 for batch in train_loader:
@@ -145,7 +145,7 @@ class Trainer():
                     spk_true = batch['spk_id'].to(device)
                     optimizer.zero_grad()
                     outs = model(x, p)
-                    loss, l1, l2 = criterion(outs['feats'], outs['proj'], outs['spk_cls_out'], spk_true)
+                    loss, l1, l2 = criterion(outs['feats'], outs['proj'], outs['spk_cls'], spk_true)
                     loss.backward()
                     optimizer.step()
                     if scheduler:
@@ -158,26 +158,26 @@ class Trainer():
                 epoch_train_loss/=len(train_loader)
                 epoch_train_loss_1/=len(train_loader)
                 epoch_train_loss_2/=len(train_loader)
-
-                print(f'> [Epoch]:{ep+1} [Train Loss]:{epoch_train_loss.data}')
-                if self.config.runner.wandb:
-                    wandb.log({"train_loss": epoch_train_loss.data,
-                                "loss_1": epoch_train_loss_1, "loss2":epoch_train_loss_2})
+                    
 
                 ##Validation loop
                 val_loss = 0
                 with torch.no_grad():
                     for batch in val_loader:
                         x = batch['x'].to(device)
-                        out = model(x)
-                        out = out.view(self.config.model.num_speakers, self.config.model.num_utter, self.config.model.feat_encoder_dim)
-                        loss = criterion(out)
+                        p = batch['p'].to(device)
+                        spk_true = batch['spk_id'].to(device)
+                        outs = model(x, p)
+                        loss, l1, l2 = criterion(outs['feats'], outs['proj'], outs['spk_cls'], spk_true)
                         val_loss+=loss.data
 
                 val_loss = val_loss/len(val_loader)
+
+                print(f'> [Epoch]:{ep+1} [Train Loss]:{epoch_train_loss.data}')
                 print(f'> [Epoch]:{ep+1} [Valid Loss]:{val_loss.data}')
                 if self.config.runner.wandb:
-                    wandb.log({"val_loss": val_loss})
+                    wandb.log({"train_loss": epoch_train_loss.data,
+                                "loss_1": epoch_train_loss_1, "loss2":epoch_train_loss_2, "val_loss": val_loss})
                 if val_loss < prev_val_loss:
                     #Save checkpoint and lr_sched state
                     torch.save(model.state_dict(), os.path.join(self.config.runner.ckpt_path, "best_model.pth"))
@@ -185,6 +185,16 @@ class Trainer():
                         torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, "scheduler.pth"))
                     torch.save(optimizer.state_dict(), os.path.join(self.config.runner.ckpt_path, "optimizer.pth"))
                 prev_val_loss = val_loss
+
+                if ep%5==0:
+                    sched_path = f"scheduler_{ep}.pth"
+                    opt_path = f"optimizer_{ep}.pth"
+                    model_path = f"model_{ep}.pth"
+
+                    torch.save(model.state_dict(), os.path.join(self.config.runner.ckpt_path, model_path))
+                    torch.save(optimizer.state_dict(), os.path.join(self.config.runner.ckpt_path, opt_path))
+                    if scheduler:
+                        torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, sched_path))
                 ep+=1
 
 

@@ -48,6 +48,9 @@ class GeneralEncoder(nn.Module):
         self.attr_predictor = MLP(feat_extractor_dim, 
                                    hidden_dim, hidden_dim)
         self.reconstructor = nn.Linear(hidden_dim*3, feat_extractor_dim)
+        self.activation_1 = nn.LeakyReLU()
+        self.activation_2 = nn.Softmax(dim=1)
+        self.activation_3 = nn.LeakyReLU()
         
 
 
@@ -56,8 +59,8 @@ class GeneralEncoder(nn.Module):
 
         #All about speaker ID
         spk_embed = self.speaker_encoder(feats)
-        spk_embed = F.leaky_relu(spk_embed)
-        spk_cls_out = F.softmax(self.speaker_cls(spk_embed))
+        spk_embed = self.activation_1(spk_embed)
+        spk_cls_out = self.activation_2(self.speaker_cls(spk_embed), dim=1)
 
         #All about pitch
         pitch_inp = torch.cat((feats, p), dim=1)
@@ -66,7 +69,7 @@ class GeneralEncoder(nn.Module):
         pitch_embed = h_n.squeeze(0)
 
         #Other attrs
-        attr_embed = F.leaky_relu(feats)
+        attr_embed = self.activation_3(self.attr_predictor(feats))
         concat_embed = torch.cat((spk_embed, pitch_embed, attr_embed), dim=1)
         proj = self.reconstructor(concat_embed)
         return {"feats":feats, "proj":proj, "spk_cls":spk_cls_out}

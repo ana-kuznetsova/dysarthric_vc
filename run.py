@@ -3,7 +3,7 @@ from modules.encoder import GeneralEncoder
 from modules.trainer import Trainer
 from modules.losses import EncLossGeneral
 from utils.eval import evaluate
-from utils.utils import move_device, freeze_params
+from utils.utils import move_device, freeze_params, get_features
 
 from torch.utils.data import random_split, DataLoader
 from TTS.encoder.models.resnet import ResNetSpeakerEncoder
@@ -115,13 +115,17 @@ def run_training(config, config_path):
             spk_enc_weights = torch.load(spk_enc_path)
             spk_enc_weights = move_device(spk_enc_weights)
             feat_extractor.load_state_dict(spk_enc_weights)
-            freeze_params(feat_extractor)
+            if config.model.freeze_spk_enc:
+                freeze_params(feat_extractor)
 
         model = GeneralEncoder(inp_feature_dim=config.model.feat_encoder_dim,
                 feature_extractor=feat_extractor,
                 feat_extractor_dim=config.model.feat_encoder_dim,
                 hidden_dim=config.model.hidden_dim, 
                 batch_size=config.trainer.batch_size, num_classes=config.data.num_speakers)
+
+        #Register hooks to extract intermediate features
+        model.global_pool.register_forward_hook(get_features('feats'))
 
         criterion = EncLossGeneral()
         optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)

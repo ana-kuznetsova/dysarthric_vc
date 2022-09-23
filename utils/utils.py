@@ -12,7 +12,7 @@ def restore(conf, model, optimizer=None, scheduler=None, mode='train'):
     files = os.listdir(path)
 
     if mode=='train':
-        latest = sorted([int(f.split('_')[-1].replace('.pth', '')) for f in files])[-1]
+        latest = sorted([int(f.split('_')[-1].replace('.pth', '')) for f in files if "_" in f])[-1]
         latest = str(latest)
         print(f"> Restoring from epoch {latest}...")
 
@@ -48,3 +48,9 @@ def freeze_params(model, layers=None):
     if not layers:
         for param in model.parameters():
             param.requires_grad = False
+
+
+def get_features(name):
+    def hook(model, input, output):
+        features[name] = output.detach()
+    return hook
