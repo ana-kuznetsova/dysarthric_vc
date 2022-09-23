@@ -13,7 +13,7 @@ class Trainer():
 
         self.epoch = configs.trainer.epoch
         self.batch_size = configs.trainer.batch_size
-        self.data_parallel = configs.trainer.data_parallel
+        self.data_parallel = configs.runner.data_parallel
         self.data_config = configs.data
         self.config = configs
     
@@ -36,8 +36,10 @@ class Trainer():
             model = torch.nn.DataParallel(model, device_ids=devices)
 
         ###Restore from checkpoint if exists
+        '''
         if (os.path.exists(self.config.runner.ckpt_path)) and (len(os.listdir(self.config.runner.ckpt_path))>0):
             restore(self.config, model, optimizer, scheduler)
+        '''
 
         ########################################
         #######Speaker Encoder Training#########

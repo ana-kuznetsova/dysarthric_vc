@@ -125,10 +125,10 @@ def run_training(config, config_path):
                 batch_size=config.trainer.batch_size, num_classes=config.data.num_speakers)
 
         #Register hooks to extract intermediate features
-        model.global_pool.register_forward_hook(get_features('feats'))
+        #model.global_pool.register_forward_hook(get_features('feats'))
 
         criterion = EncLossGeneral()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)
+        optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr, weight_decay=5e-5)
         if config.trainer.scheduler:
             lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.25)
         else:

@@ -13,8 +13,6 @@
     "trainer":{
         "epoch":10000,
         "batch_size":32,
-        "ckpt": null,
-        "data_parallel": true,
         "scheduler":true,
         "lr":0.0001
     },
@@ -28,12 +26,12 @@
         "freeze_spk_enc":true
     },
     "runner":{
-        "wandb":false,
+        "wandb":true,
         "project_name": "dysarthric_vc",
         "run_name":"attr_encoder_frozen_extractor",
         "entity":"anakuzne", 
         "log_config":true,
-        "data_parallel":true,
+        "data_parallel":false,
         "cuda_device":[0, 1],
         "ckpt_path":"/home/anakuzne/exp/general_encoder",
         "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1"

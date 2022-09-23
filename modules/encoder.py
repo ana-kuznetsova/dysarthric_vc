@@ -60,7 +60,7 @@ class GeneralEncoder(nn.Module):
         #All about speaker ID
         spk_embed = self.speaker_encoder(feats)
         spk_embed = self.activation_1(spk_embed)
-        spk_cls_out = self.activation_2(self.speaker_cls(spk_embed), dim=1)
+        spk_cls_out = self.activation_2(self.speaker_cls(spk_embed))
 
         #All about pitch
         pitch_inp = torch.cat((feats, p), dim=1)
