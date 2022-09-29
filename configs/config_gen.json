@@ -7,13 +7,13 @@
         "num_speakers":109,
         "feature": "melspec",
         "feature_dim":80,
-        "pitch":true,
-        "augment":false
+        "pitch":false,
+        "augment":true
     },
     "trainer":{
         "epoch":10000,
-        "batch_size":32,
-        "scheduler":true,
+        "batch_size":16,
+        "scheduler":false,
         "lr":0.0001
     },
     "model":{
@@ -23,17 +23,18 @@
         "num_utter":8,
         "hidden_dim":128,
         "feat_extractor":"speaker_encoder",
-        "freeze_spk_enc":true
+        "freeze_spk_enc":false
     },
     "runner":{
-        "wandb":true,
+        "wandb":false,
         "project_name": "dysarthric_vc",
-        "run_name":"attr_encoder_frozen_extractor",
+        "run_name":"attr_enc_no_pitch_ft_no_sched_augment_lr_0001",
         "entity":"anakuzne", 
         "log_config":true,
-        "data_parallel":false,
+        "data_parallel":true,
         "cuda_device":[0, 1],
-        "ckpt_path":"/home/anakuzne/exp/general_encoder",
-        "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1"
+        "ckpt_path":"/home/anakuzne/exp/general_encoder/gen_enc_v2",
+        "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1",
+        "restore_epoch":15
     }
 }

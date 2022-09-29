@@ -4,6 +4,8 @@ import torch.nn as nn
 import os
 import numpy as np
 import librosa
+import torchaudio
+from torchaudio import transforms
 import parselmouth
 import json
 from attrdict import AttrDict
@@ -227,12 +229,17 @@ def collate_spk_enc(data):
     '''
     For batch
     '''
+    sr=16000
     mel_specs = []
+    transform = transforms.MelSpectrogram(sr, n_mels=80)
 
     for fname in data:
-        wav, fs = librosa.load(fname[0], sr=16000)
-        spec = librosa.feature.melspectrogram(y=wav, sr=fs, n_mels=80)
-        mel_specs.append(torch.Tensor(spec))
+        #wav, fs = librosa.load(fname[0], sr=16000)
+        wav, _ = torchaudio.load(fname[0])
+        #spec = librosa.feature.melspectrogram(y=wav, sr=fs, n_mels=80)
+        spec = transform(wav)
+        #mel_specs.append(torch.Tensor(spec))
+        mel_specs.append(spec)
     
     maxlen_mel = max([i.shape[-1] for i in mel_specs])
     padded_mels = [nn.ZeroPad2d(padding=(0, maxlen_mel - i.shape[-1], 0, 0))(i) for i in mel_specs]
@@ -248,30 +255,26 @@ def pad_noise(speech, noise):
     Cuts noise vector if speech vec is shorter
     Adds noise if speech vector is longer
     '''
-    noise_len = noise.shape[0]
-    speech_len = speech.shape[0]
-    
+    noise_len = noise.shape[1]
+    speech_len = speech.shape[1]
+
     if speech_len > noise_len:
-        repeat = speech_len//noise_len
-        if repeat == 1:
-            diff = speech_len - noise_len
-            noise = np.concatenate((noise, noise[:diff]), axis=0)
-        else:
-            noise = np.tile(noise, repeat)
-            diff = speech_len - noise.shape[0]
-            noise = np.concatenate((noise, noise[:diff]))           
+        repeat = (speech_len//noise_len) +1
+        noise = torch.tile(noise, (1, repeat))
+        diff = speech_len - noise.shape[1]
+        noise = noise[:, :noise.shape[1]+diff]          
             
     elif speech_len < noise_len:
-        noise = noise[:speech_len]  
+        noise = noise[:,:speech_len]
     return noise
 
 def mix_signals(speech, noise, desired_snr):    
     #calculate energies
-    E_speech = np.sum(np.power(speech, 2))
-    E_noise = np.sum(np.power(noise, 2))
+    E_speech = torch.sum(speech**2)
+    E_noise = torch.sum(noise**2)
     
     #calculate b coeff
-    b = np.sqrt((E_speech/(np.power(10, desired_snr/10)))/E_noise)    
+    b = torch.sqrt((E_speech/((desired_snr/10)**10))/E_noise)    
     return speech + b*noise
 
 
@@ -286,12 +289,14 @@ def augment(fname):
             if '.wav' in fpath:
                 musan_files.append(fpath)
 
-    orig_wav, fs = librosa.load(fname[0], sr=16000)
+    #orig_wav, fs = librosa.load(fname[0], sr=16000)
+    orig_wav, fs = torchaudio.load(fname[0])
 
     return_values = []
     for i in range(2):
         SNR = random.randrange(13, 20)
-        mix_sig, fs = librosa.load(random.choice(musan_files), sr=16000)
+        #mix_sig, fs = librosa.load(random.choice(musan_files), sr=16000)
+        mix_sig, fs = torchaudio.load(random.choice(musan_files))
         mix_sig = pad_noise(orig_wav, mix_sig)
         mix_wav = mix_signals(orig_wav, mix_sig, SNR)
         return_values.append(mix_wav)
@@ -303,14 +308,16 @@ def collate_spk_enc_augment(data):
     '''
     For batch
     '''
+
+    sr=16000
     mel_specs = []
-    fs = 16000
+    transform = transforms.MelSpectrogram(sr, n_mels=80)
 
     for fname in data:
         mixed_wavs = augment(fname)
         for wav in mixed_wavs:
-            spec = librosa.feature.melspectrogram(y=wav, sr=fs, n_mels=80)
-            mel_specs.append(torch.Tensor(spec))
+            spec = transform(wav)
+            mel_specs.append(spec)
     
     maxlen_mel = max([i.shape[-1] for i in mel_specs])
     padded_mels = [nn.ZeroPad2d(padding=(0, maxlen_mel - i.shape[-1], 0, 0))(i) for i in mel_specs]

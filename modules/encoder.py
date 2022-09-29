@@ -42,19 +42,21 @@ class GeneralEncoder(nn.Module):
         self.speaker_encoder = MLP(feat_extractor_dim, 
                                    hidden_dim, hidden_dim)
         self.speaker_cls = nn.Linear(hidden_dim, num_classes)
+        '''
         self.pitch_predictor = nn.GRU(input_size=1, hidden_size=hidden_dim, 
                                       num_layers=1)
+                                      '''
         #Predicts everything else other than pitch or speaker ID
         self.attr_predictor = MLP(feat_extractor_dim, 
                                    hidden_dim, hidden_dim)
-        self.reconstructor = nn.Linear(hidden_dim*3, feat_extractor_dim)
+        self.reconstructor = nn.Linear(hidden_dim*2, feat_extractor_dim)
         self.activation_1 = nn.LeakyReLU()
         self.activation_2 = nn.Softmax(dim=1)
         self.activation_3 = nn.LeakyReLU()
         
 
 
-    def forward(self, x, p):
+    def forward(self, x):
         feats = self.feature_extractor(x)
 
         #All about speaker ID
@@ -63,13 +65,52 @@ class GeneralEncoder(nn.Module):
         spk_cls_out = self.activation_2(self.speaker_cls(spk_embed))
 
         #All about pitch
+        '''
         pitch_inp = torch.cat((feats, p), dim=1)
         pitch_inp = torch.transpose(pitch_inp, 0, 1).unsqueeze(2)
         out, h_n = self.pitch_predictor(pitch_inp)
         pitch_embed = h_n.squeeze(0)
+        '''
 
         #Other attrs
         attr_embed = self.activation_3(self.attr_predictor(feats))
-        concat_embed = torch.cat((spk_embed, pitch_embed, attr_embed), dim=1)
+        #concat_embed = torch.cat((spk_embed, pitch_embed, attr_embed), dim=1)
+        concat_embed = torch.cat((spk_embed, attr_embed), dim=1)
         proj = self.reconstructor(concat_embed)
+        return {"feats":feats, "proj":proj, "spk_cls":spk_cls_out}
+
+
+class GeneralEncoder_v2(nn.Module):
+    '''
+    General encoder does not model dysarthric featrures
+    It only models speaker ID embedding and Pitch predictor
+    '''
+
+    def __init__(self,
+                inp_feature_dim,
+                feature_extractor,
+                feat_extractor_dim,
+                hidden_dim, batch_size,
+                num_classes
+
+    ):
+        super(GeneralEncoder, self).__init__()
+
+        self.batch_size = batch_size
+        self.feature_extractor = feature_extractor
+
+        #Predicts everything else other than pitch or speaker ID
+        self.attr_predictor = MLP(feat_extractor_dim, 
+                                   hidden_dim, hidden_dim)
+        self.reconstructor = nn.Linear(hidden_dim*2, feat_extractor_dim)
+        self.activation_1 = nn.LeakyReLU()
+        self.activation_3 = nn.LeakyReLU()
+        
+
+
+    def forward(self, x):
+        feats = self.feature_extractor(x)
+        concat_embed = torch.cat((feats, attr_embed), dim=1)
+        proj = self.reconstructor(concat_embed)
+        spk_cls_out = None
         return {"feats":feats, "proj":proj, "spk_cls":spk_cls_out}

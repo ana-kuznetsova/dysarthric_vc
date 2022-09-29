@@ -70,7 +70,7 @@ def run_training(config, config_path):
                                 )
 
     else:
-    
+
         train_len = int(len(dataset)*0.9)
         val_len = len(dataset) -  int(len(dataset)*0.9)
 
@@ -79,13 +79,13 @@ def run_training(config, config_path):
 
         train_loader = DataLoader(train,
                                     batch_size=config.trainer.batch_size, 
-                                    shuffle=True, collate_fn=collate_fn,
-                                    drop_last=True, num_workers=2, pin_memory=False
+                                    shuffle=True, collate_fn=collate_spk_enc_augment,
+                                    drop_last=True, num_workers=1, pin_memory=False
                                 )
         val_loader = DataLoader(val,
                                     batch_size=config.trainer.batch_size, 
-                                    shuffle=True, collate_fn=collate_fn,
-                                    drop_last=True, num_workers=2, pin_memory=False
+                                    shuffle=True, collate_fn=collate_spk_enc,
+                                    drop_last=True, num_workers=1, pin_memory=False
                                 )
 
 
@@ -110,7 +110,8 @@ def run_training(config, config_path):
     elif config.model.model_name=='general_encoder':
 
         feat_extractor = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
-        if config.runner.spk_enc_path:
+
+        if not config.runner.restore_epoch and config.runner.spk_enc_path:
             spk_enc_path = os.path.join(config.runner.spk_enc_path, 'best_model.pth')
             spk_enc_weights = torch.load(spk_enc_path)
             spk_enc_weights = move_device(spk_enc_weights)
@@ -124,11 +125,29 @@ def run_training(config, config_path):
                 hidden_dim=config.model.hidden_dim, 
                 batch_size=config.trainer.batch_size, num_classes=config.data.num_speakers)
 
+        criterion = EncLossGeneral()
+        optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
+
+        if config.runner.restore_epoch:
+            opt_path = os.path.join(config.runner.ckpt_path, f"optimizer_{config.runner.restore_epoch}.pth")
+            optimizer.load_state_dict(torch.load(opt_path))
+            model_path = os.path.join(config.runner.ckpt_path, f"model_{config.runner.restore_epoch}.pth")
+
+            ##Avoid pytorch bug from parallel training
+            state_dict = torch.load(model_path)
+            state_dict_new = {}
+
+            for k in state_dict:
+                k_new = k.replace("module.", '')
+                state_dict_new[k_new] = state_dict[k]
+            state_dict = state_dict_new
+            del state_dict_new
+            model.load_state_dict(state_dict)
+        
+            print(f"Restarted previous experiment from epoch {config.runner.restore_epoch}")
         #Register hooks to extract intermediate features
         #model.global_pool.register_forward_hook(get_features('feats'))
 
-        criterion = EncLossGeneral()
-        optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr, weight_decay=5e-5)
         if config.trainer.scheduler:
             lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.25)
         else:

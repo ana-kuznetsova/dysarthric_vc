@@ -6,6 +6,7 @@ import os
 import wandb
 import numpy as np
 from tqdm import tqdm
+from utils.utils import optimizer_to
 
 class Trainer():
     def __init__(self, configs):
@@ -34,12 +35,7 @@ class Trainer():
             print(f"> Using CUDA {devices}")
             model = model.to(device)
             model = torch.nn.DataParallel(model, device_ids=devices)
-
-        ###Restore from checkpoint if exists
-        '''
-        if (os.path.exists(self.config.runner.ckpt_path)) and (len(os.listdir(self.config.runner.ckpt_path))>0):
-            restore(self.config, model, optimizer, scheduler)
-        '''
+        criterion = criterion.to(device)
 
         ########################################
         #######Speaker Encoder Training#########
@@ -133,7 +129,13 @@ class Trainer():
         ########################################
 
         if self.config.model.model_name=='general_encoder':
-            ep = 0
+            #torch.set_num_threads(1)
+            #print(f"Num threads: {torch.get_num_threads()}")
+            if self.config.runner.restore_epoch:
+                ep = self.config.runner.restore_epoch
+                optimizer_to(optimizer, device)
+            else:
+                ep = 0
             step = 0
             prev_val_loss = 0
             while ep < self.config.trainer.epoch:
@@ -143,10 +145,10 @@ class Trainer():
                 epoch_train_loss_2 = 0
                 for batch in train_loader:
                     x = batch['x'].to(device)
-                    p = batch['p'].to(device)
+                    #p = batch['p'].to(device)
                     spk_true = batch['spk_id'].to(device)
                     optimizer.zero_grad()
-                    outs = model(x, p)
+                    outs = model(x)
                     loss, l1, l2 = criterion(outs['feats'], outs['proj'], outs['spk_cls'], spk_true)
                     loss.backward()
                     optimizer.step()
@@ -167,9 +169,9 @@ class Trainer():
                 with torch.no_grad():
                     for batch in val_loader:
                         x = batch['x'].to(device)
-                        p = batch['p'].to(device)
+                        #p = batch['p'].to(device)
                         spk_true = batch['spk_id'].to(device)
-                        outs = model(x, p)
+                        outs = model(x)
                         loss, l1, l2 = criterion(outs['feats'], outs['proj'], outs['spk_cls'], spk_true)
                         val_loss+=loss.data
 
@@ -179,7 +181,7 @@ class Trainer():
                 print(f'> [Epoch]:{ep+1} [Valid Loss]:{val_loss.data}')
                 if self.config.runner.wandb:
                     wandb.log({"train_loss": epoch_train_loss.data,
-                                "loss_1": epoch_train_loss_1, "loss2":epoch_train_loss_2, "val_loss": val_loss})
+                               "val_loss": val_loss.data, "l1_rc":epoch_train_loss_1, "ce_loss":epoch_train_loss_2})
                 if val_loss < prev_val_loss:
                     #Save checkpoint and lr_sched state
                     torch.save(model.state_dict(), os.path.join(self.config.runner.ckpt_path, "best_model.pth"))
