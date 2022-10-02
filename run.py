@@ -80,12 +80,12 @@ def run_training(config, config_path):
         train_loader = DataLoader(train,
                                     batch_size=config.trainer.batch_size, 
                                     shuffle=True, collate_fn=collate_spk_enc_augment,
-                                    drop_last=True, num_workers=1, pin_memory=False
+                                    drop_last=True, num_workers=2, pin_memory=False
                                 )
         val_loader = DataLoader(val,
                                     batch_size=config.trainer.batch_size, 
                                     shuffle=True, collate_fn=collate_spk_enc,
-                                    drop_last=True, num_workers=1, pin_memory=False
+                                    drop_last=True, num_workers=2, pin_memory=False
                                 )
 
 
@@ -123,9 +123,9 @@ def run_training(config, config_path):
                 feature_extractor=feat_extractor,
                 feat_extractor_dim=config.model.feat_encoder_dim,
                 hidden_dim=config.model.hidden_dim, 
-                batch_size=config.trainer.batch_size, num_classes=config.data.num_speakers)
+                batch_size=config.trainer.batch_size, num_classes=config.data.num_speakers, mi=config.model.use_mi)
 
-        criterion = EncLossGeneral()
+        criterion = EncLossGeneral(mi=config.model.use_mi)
         optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
 
         if config.runner.restore_epoch:

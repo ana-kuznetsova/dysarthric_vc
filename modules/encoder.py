@@ -32,7 +32,8 @@ class GeneralEncoder(nn.Module):
                 feature_extractor,
                 feat_extractor_dim,
                 hidden_dim, batch_size,
-                num_classes
+                num_classes,
+                mi=False
 
     ):
         super(GeneralEncoder, self).__init__()
@@ -53,6 +54,7 @@ class GeneralEncoder(nn.Module):
         self.activation_1 = nn.LeakyReLU()
         self.activation_2 = nn.Softmax(dim=1)
         self.activation_3 = nn.LeakyReLU()
+        self.mi = mi
         
 
 
@@ -77,40 +79,4 @@ class GeneralEncoder(nn.Module):
         #concat_embed = torch.cat((spk_embed, pitch_embed, attr_embed), dim=1)
         concat_embed = torch.cat((spk_embed, attr_embed), dim=1)
         proj = self.reconstructor(concat_embed)
-        return {"feats":feats, "proj":proj, "spk_cls":spk_cls_out}
-
-
-class GeneralEncoder_v2(nn.Module):
-    '''
-    General encoder does not model dysarthric featrures
-    It only models speaker ID embedding and Pitch predictor
-    '''
-
-    def __init__(self,
-                inp_feature_dim,
-                feature_extractor,
-                feat_extractor_dim,
-                hidden_dim, batch_size,
-                num_classes
-
-    ):
-        super(GeneralEncoder, self).__init__()
-
-        self.batch_size = batch_size
-        self.feature_extractor = feature_extractor
-
-        #Predicts everything else other than pitch or speaker ID
-        self.attr_predictor = MLP(feat_extractor_dim, 
-                                   hidden_dim, hidden_dim)
-        self.reconstructor = nn.Linear(hidden_dim*2, feat_extractor_dim)
-        self.activation_1 = nn.LeakyReLU()
-        self.activation_3 = nn.LeakyReLU()
-        
-
-
-    def forward(self, x):
-        feats = self.feature_extractor(x)
-        concat_embed = torch.cat((feats, attr_embed), dim=1)
-        proj = self.reconstructor(concat_embed)
-        spk_cls_out = None
-        return {"feats":feats, "proj":proj, "spk_cls":spk_cls_out}
+        return {"feats":feats, "proj":proj, "spk_cls":spk_cls_out, "spk_emb":spk_embed, "attr_emb":attr_embed}

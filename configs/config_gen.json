@@ -23,18 +23,25 @@
         "num_utter":8,
         "hidden_dim":128,
         "feat_extractor":"speaker_encoder",
-        "freeze_spk_enc":false
+        "freeze_spk_enc":true,
+        "use_mi": false
+    },
+   "mi_estimator":{
+        "x_dim":128,
+        "y_dim":128,
+        "hidden_dim":16,
+        "mi_iter":10
     },
     "runner":{
-        "wandb":false,
+        "wandb":true,
         "project_name": "dysarthric_vc",
-        "run_name":"attr_enc_no_pitch_ft_no_sched_augment_lr_0001",
+        "run_name":"attr_enc_no_pitch_ft_augment_lr_0001_restored15ep_frozen",
         "entity":"anakuzne", 
         "log_config":true,
-        "data_parallel":true,
+        "data_parallel":false,
         "cuda_device":[0, 1],
-        "ckpt_path":"/home/anakuzne/exp/general_encoder/gen_enc_v2",
+        "ckpt_path":"/home/anakuzne/exp/general_encoder/gen_enc_v3",
         "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1",
-        "restore_epoch":15
+        "restore_epoch":false
     }
 }

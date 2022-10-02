@@ -69,3 +69,9 @@ def optimizer_to(optim, device):
                     subparam.data = subparam.data.to(device)
                     if subparam._grad is not None:
                         subparam._grad.data = subparam._grad.data.to(device)
+
+
+def shuffle_tensor(x, dim):
+    idx = torch.randperm(x.size(dim))
+    x = x[:, idx]
+    return x

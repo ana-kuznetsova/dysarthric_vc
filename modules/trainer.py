@@ -6,7 +6,8 @@ import os
 import wandb
 import numpy as np
 from tqdm import tqdm
-from utils.utils import optimizer_to
+from utils.utils import optimizer_to, shuffle_tensor
+from modules.losses import CLUB
 
 class Trainer():
     def __init__(self, configs):
@@ -17,6 +18,7 @@ class Trainer():
         self.data_parallel = configs.runner.data_parallel
         self.data_config = configs.data
         self.config = configs
+    
     
     def train(self, train_loader, 
               val_loader, model, criterion,
@@ -125,7 +127,7 @@ class Trainer():
 
 
         ########################################
-        #### General Encoder Training (no MI)###
+        #### General Encoder Training###
         ########################################
 
         if self.config.model.model_name=='general_encoder':
@@ -138,18 +140,34 @@ class Trainer():
                 ep = 0
             step = 0
             prev_val_loss = 0
+            no_improvement = 0
+
+            if self.config.model.use_mi:
+                mi_estimator = CLUB(self.config.mi_estimator.x_dim, 
+                                    self.config.mi_estimator.y_dim,
+                                    self.config.mi_estimator.hidden_dim).to(device)
+                mi_optimizer = torch.optim.Adam(mi_estimator.parameters(), lr=1e-4)
+            else:
+                mi_estimator = None
+                mi_optimizer = None
+
+
             while ep < self.config.trainer.epoch:
                 print(f"Starting [epoch]:{ep+1}/{self.config.trainer.epoch}")
                 epoch_train_loss = 0
                 epoch_train_loss_1 = 0
                 epoch_train_loss_2 = 0
-                for batch in train_loader:
+                epoch_mi_loss = 0
+                epoch_mi_learn_loss = 0
+                for i, batch in enumerate(train_loader):
+                    if self.config.model.use_mi:
+                        mi_estimator.eval()
                     x = batch['x'].to(device)
                     #p = batch['p'].to(device)
                     spk_true = batch['spk_id'].to(device)
                     optimizer.zero_grad()
                     outs = model(x)
-                    loss, l1, l2 = criterion(outs['feats'], outs['proj'], outs['spk_cls'], spk_true)
+                    loss, l1, l2, mi_loss = criterion(outs, spk_true, mi_estimator)
                     loss.backward()
                     optimizer.step()
                     if scheduler:
@@ -158,6 +176,23 @@ class Trainer():
                     epoch_train_loss+=loss.data
                     epoch_train_loss_1+=l1.data
                     epoch_train_loss_2+=l2.data
+                    #epoch_mi_loss+=mi_loss.data
+
+                    #MI estimator training
+
+                    if self.config.model.use_mi:
+                        for i in range(self.config.mi_estimator.mi_iter):
+                            mi_estimator.train()
+                            x = batch['x'].to(device)
+                            outs = model(x)
+                            x = outs["spk_emb"]
+                            y =  outs["attr_emb"]
+                            y = shuffle_tensor(y, dim=1)
+                            mi_learn_loss = mi_estimator.learning_loss(x, y)
+                            epoch_mi_learn_loss+=mi_loss.data
+                            mi_learn_loss.backward()
+                            mi_optimizer.step()
+                        epoch_mi_learn_loss/= self.config.mi_estimator.mi_iter
 
                 epoch_train_loss/=len(train_loader)
                 epoch_train_loss_1/=len(train_loader)
@@ -166,29 +201,46 @@ class Trainer():
 
                 ##Validation loop
                 val_loss = 0
+                val_loss_1 = 0
+                val_loss_2 = 0
                 with torch.no_grad():
                     for batch in val_loader:
                         x = batch['x'].to(device)
                         #p = batch['p'].to(device)
                         spk_true = batch['spk_id'].to(device)
                         outs = model(x)
-                        loss, l1, l2 = criterion(outs['feats'], outs['proj'], outs['spk_cls'], spk_true)
+                        loss, l1, l2, mi_loss = criterion(outs, spk_true, mi_estimator)
                         val_loss+=loss.data
+                        val_loss_1+=l1.data
+                        val_loss_2+=l2.data
 
                 val_loss = val_loss/len(val_loader)
+                val_loss_1 = val_loss_1/len(val_loader)
+                val_loss_2 = val_loss_2/len(val_loader)
 
                 print(f'> [Epoch]:{ep+1} [Train Loss]:{epoch_train_loss.data}')
                 print(f'> [Epoch]:{ep+1} [Valid Loss]:{val_loss.data}')
                 if self.config.runner.wandb:
                     wandb.log({"train_loss": epoch_train_loss.data,
-                               "val_loss": val_loss.data, "l1_rc":epoch_train_loss_1, "ce_loss":epoch_train_loss_2})
+                               "val_loss": val_loss.data, "l1_rc":epoch_train_loss_1,
+                                "ce_loss":epoch_train_loss_2,
+                                "mi_loss":epoch_mi_loss,
+                                "val_l1_rc_loss":val_loss_1,
+                                "val_ce_loss":val_loss_2})
                 if val_loss < prev_val_loss:
                     #Save checkpoint and lr_sched state
                     torch.save(model.state_dict(), os.path.join(self.config.runner.ckpt_path, "best_model.pth"))
+                    torch.save(optimizer.state_dict(), os.path.join(self.config.runner.ckpt_path, "optimizer.pth"))
                     if scheduler:
                         torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, "scheduler.pth"))
-                    torch.save(optimizer.state_dict(), os.path.join(self.config.runner.ckpt_path, "optimizer.pth"))
+                else:
+                    no_improvement+=1
+
                 prev_val_loss = val_loss
+
+                if no_improvement>=5:
+                    no_improvement=0
+                    scheduler.step()
 
                 if ep%5==0:
                     sched_path = f"scheduler_{ep}.pth"
@@ -200,7 +252,6 @@ class Trainer():
                     if scheduler:
                         torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, sched_path))
                 ep+=1
-
 
     def inference(self, test_loader, model, device, parallel=False, out_dir='./'):
 

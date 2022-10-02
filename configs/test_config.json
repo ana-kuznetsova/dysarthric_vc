@@ -12,7 +12,7 @@
     },
     "trainer":{
         "epoch":10000,
-        "batch_size":32,
+        "batch_size":4,
         "ckpt": null,
         "data_parallel": true,
         "scheduler":false,
@@ -25,17 +25,25 @@
         "num_utter":8,
         "hidden_dim":128, 
         "feat_extractor":"speaker_encoder", 
-        "freeze_spk_enc":true
+        "freeze_spk_enc":false,
+        "use_mi": true
+    },
+    "mi_estimator":{
+        "x_dim":128,
+        "y_dim":128,
+        "hidden_dim":16,
+        "mi_iter":2
     },
     "runner":{
         "wandb":false,
+        "restore_epoch":false,
         "project_name": "dysarthric_vc",
         "run_name":"test_general",
         "entity":"anakuzne", 
         "log_config":true,
         "data_parallel":false,
         "cuda_device":[0, 1],
-        "ckpt_path":"/home/anakuzne/exp/general_encoder",
+        "ckpt_path":"/home/anakuzne/exp/general_encoder/test",
         "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1"
     }
 }
