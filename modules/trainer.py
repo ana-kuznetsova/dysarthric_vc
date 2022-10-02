@@ -238,7 +238,7 @@ class Trainer():
 
                 prev_val_loss = val_loss
 
-                if no_improvement>=5:
+                if scheduler!=None and no_improvement>=5:
                     no_improvement=0
                     scheduler.step()
 

@@ -24,6 +24,7 @@
         "hidden_dim":128,
         "feat_extractor":"speaker_encoder",
         "freeze_spk_enc":true,
+        "freeze_layers":["layer4"],
         "use_mi": false
     },
    "mi_estimator":{
@@ -35,13 +36,13 @@
     "runner":{
         "wandb":true,
         "project_name": "dysarthric_vc",
-        "run_name":"attr_enc_no_pitch_ft_augment_lr_0001_restored15ep_frozen",
+        "run_name":"attr_enc_no_pitch_ft_augment_lr_0001_unfreeze_4th_layer",
         "entity":"anakuzne", 
         "log_config":true,
         "data_parallel":false,
         "cuda_device":[0, 1],
-        "ckpt_path":"/home/anakuzne/exp/general_encoder/gen_enc_v3",
+        "ckpt_path":"/home/anakuzne/exp/general_encoder/gen_enc_v4",
         "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1",
-        "restore_epoch":25
+        "restore_epoch":null
     }
 }

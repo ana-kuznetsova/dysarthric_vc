@@ -116,7 +116,9 @@ def run_training(config, config_path):
             spk_enc_weights = torch.load(spk_enc_path)
             spk_enc_weights = move_device(spk_enc_weights)
             feat_extractor.load_state_dict(spk_enc_weights)
-            if config.model.freeze_spk_enc:
+            if config.model.freeze_spk_enc and config.model.freeze_layers:
+                freeze_params(feat_extractor, config.model.freeze_layers)
+            elif config.model.freeze_spk_enc:
                 freeze_params(feat_extractor)
 
         model = GeneralEncoder(inp_feature_dim=config.model.feat_encoder_dim,

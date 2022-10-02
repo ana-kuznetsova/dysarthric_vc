@@ -83,6 +83,55 @@ def filter_speakers(configs):
 
     return train_files, train_spk_ids,  test_files, test_spk_ids, spk2id_map
 
+class SimulatedData(data.Dataset):
+    def __init__(self, config, mode='train'):
+        self.mode = mode
+        self.data_path = config.data.dataset_path
+        self.meta_path = os.path.join(config.data.dataset_path, "meta.txt")
+        self.fnames = collect_fnames(self.data_path)
+        self.train_files = []
+        self.train_spk = []
+        self.test_files = []
+        self.test_spk = []
+
+
+        with open(meta_path, 'r') as fo:
+            meta = fo.readlines()
+        fname2spk_map = {}
+        for line in meta:
+            f = line.split("|")[0]
+            spk = line.split("|")[1]
+            fname2spk_map[f] = spk
+        spk2id_map ={}
+        unique_speakers = list(set(fname2spk_map.values()))
+        for i, spk in enumerate(unique_speakers):
+            spk2file_map[spk] = i
+
+        train_len = int(len(self.fnames)*0.9)
+        self.train_files = self.fnames[:train_len]
+        self.test_files = self.fnames[train_len:]
+
+        for f in self.train_files:
+            spk = f.split('/')[-1].replace('.wav', '')
+            self.train_spk.append(spk2id_map[spk])
+
+        for f in self.test_files:
+            spk = f.split('/')[-1].replace('.wav', '')
+            self.test_spk.append(spk2id_map[spk])
+
+        def __len__(self):
+            if self.mode=='train':
+                return len(self.train_files)
+            return len(self.test_files)
+    
+        def __getitem__(self, idx):
+            if torch.is_tensor(idx):
+                idx = idx.tolist()
+            if self.mode=='train':
+                return (self.train_files[idx], self.train_spk_ids[idx])
+            return (self.test_files[idx], self.test_spk_ids[idx])
+
+
 class LibriTTSData(data.Dataset):
     def __init__(self, config, mode='train'):
         self.mode = mode
