@@ -24,7 +24,7 @@
         "hidden_dim":128,
         "feat_extractor":"speaker_encoder",
         "freeze_spk_enc":true,
-        "freeze_layers":["layer4"],
+        "unfreeze_layers":["layer4"],
         "use_mi": false
     },
    "mi_estimator":{

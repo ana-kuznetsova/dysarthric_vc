@@ -105,8 +105,8 @@ def run_training(config, config_path):
             spk_enc_weights = torch.load(spk_enc_path)
             spk_enc_weights = move_device(spk_enc_weights)
             model.load_state_dict(spk_enc_weights)
-            if config.model.freeze_spk_enc and config.model.freeze_layers:
-                freeze_params(feat_extractor, config.model.freeze_layers)
+            if config.model.freeze_spk_enc and config.model.unfreeze_layers:
+                freeze_params(feat_extractor, config.model.unfreeze_layers)
 
         criterion = SoftmaxAngleProtoLoss(embedding_dim=config.model.feat_encoder_dim, n_speakers=config.data.num_speakers)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)
