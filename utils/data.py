@@ -39,29 +39,47 @@ def get_pitch(path):
     return np.nan_to_num(np.array(pitch_arr))
 
 
-def filter_speakers(configs):
-    test_spk = list(configs.data.test_partition)
-    ignore = configs.data.ignore_speakers
-    all_wav_paths = collect_fnames(configs.data.dataset_path)
+def filter_speakers(config):
+    test_spk = list(config.data.test_partition)
+    ignore = config.data.ignore_speakers
+    all_wav_paths = collect_fnames(config.data.dataset_path)
     all_wav_paths = [f for f in all_wav_paths for i in ignore if i not in f]
     test_files = []
     train_files = []
 
-    for f in all_wav_paths:
-        flag = False
-        for t in test_spk:
-            if t in f:
-                flag=True
-                test_files.append(f)
-                break    
-        if flag==False:
-            train_files.append(f)
-                
+    #Collect train, test file lists, unique speakers
+    if config.data.dataset=='VCTK':
+        for f in all_wav_paths:
+            flag = False
+            for t in test_spk:
+                if t in f:
+                    flag=True
+                    test_files.append(f)
+                    break    
+            if flag==False:
+                train_files.append(f)
+        unique_speakers = os.listdir(configs.data.dataset_path)
+    elif config.data.dataset=='DysarthricSim':
+        with open(config.meta_path, 'r') as fo:
+            meta = fo.readlines()
+        
+        file2spk_map {}
+        for line in meta:
+            f = line.split('|')[0]
+            spk = line.split("|")[1]
+            file2spk_map[f] = spk 
+        for k in file2spk_map:
+            path = os.path.join(config.data.dataset_path, k)
+            if file2spk_map[k] in config.data.test_partition:
+                test_files.append(path)
+            else:
+                train_files.append(path)
+        unique_speakers = list(set(file2spk_map.values()))
 
-    unique_speakers = os.listdir(configs.data.dataset_path)
     for i in ignore:
         unique_speakers.remove(i)
-        unique_speakers.remove('log.txt')
+        if os.path.exists('log.txt')
+            unique_speakers.remove('log.txt')
 
     spk2id_map = {}
 
@@ -73,63 +91,26 @@ def filter_speakers(configs):
     train_spk_ids = []
     test_spk_ids = []
     
-    for i in train_files:
-        spk_id = i.split('/')[-1].split('_')[0]
-        train_spk_ids.append(spk2id_map[spk_id])
+    if config.data.dataset=='VCTK':
+        for i in train_files:
+            spk_id = i.split('/')[-1].split('_')[0].replace('.wav', '')
+            train_spk_ids.append(spk2id_map[spk_id])
 
-    for i in test_files:
-        spk_id = i.split('/')[-1].split('_')[0]
-        test_spk_ids.append(spk2id_map[spk_id])
+        for i in test_files:
+            spk_id = i.split('/')[-1].split('_')[0].replace('.wav', '')
+            test_spk_ids.append(spk2id_map[spk_id])
+    elif config.data.dataset=='DsyarthricSim':
+        for i in train_files:
+            wav = i.split('/')[0]
+            spk_id = file2spk_map[wav]
+            train_spk_ids.append(spk2id_map[spk_id])
+        for i in test_files:
+            wav = i.split('/')[0]
+            spk_id = file2spk_map[wav]
+            test_spk_ids.append(spk2id_map[spk_id])
+
 
     return train_files, train_spk_ids,  test_files, test_spk_ids, spk2id_map
-
-class SimulatedData(data.Dataset):
-    def __init__(self, config, mode='train'):
-        self.mode = mode
-        self.data_path = config.data.dataset_path
-        self.meta_path = os.path.join(config.data.dataset_path, "meta.txt")
-        self.fnames = collect_fnames(self.data_path)
-        self.train_files = []
-        self.train_spk = []
-        self.test_files = []
-        self.test_spk = []
-
-
-        with open(meta_path, 'r') as fo:
-            meta = fo.readlines()
-        fname2spk_map = {}
-        for line in meta:
-            f = line.split("|")[0]
-            spk = line.split("|")[1]
-            fname2spk_map[f] = spk
-        spk2id_map ={}
-        unique_speakers = list(set(fname2spk_map.values()))
-        for i, spk in enumerate(unique_speakers):
-            spk2file_map[spk] = i
-
-        train_len = int(len(self.fnames)*0.9)
-        self.train_files = self.fnames[:train_len]
-        self.test_files = self.fnames[train_len:]
-
-        for f in self.train_files:
-            spk = f.split('/')[-1].replace('.wav', '')
-            self.train_spk.append(spk2id_map[spk])
-
-        for f in self.test_files:
-            spk = f.split('/')[-1].replace('.wav', '')
-            self.test_spk.append(spk2id_map[spk])
-
-        def __len__(self):
-            if self.mode=='train':
-                return len(self.train_files)
-            return len(self.test_files)
-    
-        def __getitem__(self, idx):
-            if torch.is_tensor(idx):
-                idx = idx.tolist()
-            if self.mode=='train':
-                return (self.train_files[idx], self.train_spk_ids[idx])
-            return (self.test_files[idx], self.test_spk_ids[idx])
 
 
 class LibriTTSData(data.Dataset):
