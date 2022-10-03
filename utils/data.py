@@ -43,7 +43,8 @@ def filter_speakers(config):
     test_spk = list(config.data.test_partition)
     ignore = config.data.ignore_speakers
     all_wav_paths = collect_fnames(config.data.dataset_path)
-    all_wav_paths = [f for f in all_wav_paths for i in ignore if i not in f]
+    if ignore[0]:
+        all_wav_paths = [f for f in all_wav_paths for i in ignore if i not in f]
     test_files = []
     train_files = []
 
@@ -60,14 +61,18 @@ def filter_speakers(config):
                 train_files.append(f)
         unique_speakers = os.listdir(configs.data.dataset_path)
     elif config.data.dataset=='DysarthricSim':
-        with open(config.meta_path, 'r') as fo:
+        with open(config.data.meta_path, 'r') as fo:
             meta = fo.readlines()
         
-        file2spk_map {}
+        file2spk_map = {}
+        true_files = os.listdir(config.data.dataset_path)
         for line in meta:
-            f = line.split('|')[0]
-            spk = line.split("|")[1]
-            file2spk_map[f] = spk 
+            f = line.split('|')[0]+'.wav'
+            if f in true_files:
+                f = os.path.join(config.data.dataset_path, f)
+                spk = line.split("|")[1]
+                file2spk_map[f] = spk 
+        
         for k in file2spk_map:
             path = os.path.join(config.data.dataset_path, k)
             if file2spk_map[k] in config.data.test_partition:
@@ -75,11 +80,12 @@ def filter_speakers(config):
             else:
                 train_files.append(path)
         unique_speakers = list(set(file2spk_map.values()))
-
-    for i in ignore:
-        unique_speakers.remove(i)
-        if os.path.exists('log.txt')
-            unique_speakers.remove('log.txt')
+    
+    if ignore[0]:
+        for i in ignore:
+            unique_speakers.remove(i)
+            if os.path.exists('log.txt'):
+                unique_speakers.remove('log.txt')
 
     spk2id_map = {}
 
@@ -109,8 +115,11 @@ def filter_speakers(config):
             spk_id = file2spk_map[wav]
             test_spk_ids.append(spk2id_map[spk_id])
 
-
-    return train_files, train_spk_ids,  test_files, test_spk_ids, spk2id_map
+    #print(f"DEBUG {train_files[:5]}")
+    #print(f"DEBUG {spk2id_map}")
+    if config.data.dataset=='VCTK':
+        return train_files, train_spk_ids,  test_files, test_spk_ids, spk2id_map, None
+    return train_files, train_spk_ids,  test_files, test_spk_ids, spk2id_map, file2spk_map
 
 
 class LibriTTSData(data.Dataset):
@@ -164,17 +173,22 @@ class VCTKAngleProtoData(data.Dataset):
         self.mode = mode
         self.data_path = config.data.dataset_path
         
-        train_files, train_spk_ids, test_files, test_spk_ids, spk2id_map = filter_speakers(config)
+        train_files, train_spk_ids, test_files, test_spk_ids, spk2id_map, file2spk_map = filter_speakers(config)
 
         assert config.model.num_speakers*config.model.num_utter == config.trainer.batch_size
         #map speakers to files 
 
         spk2file_map = {s:[] for s in spk2id_map}
 
-        for s in spk2id_map:
-            for f in train_files:
-                if s in f:
-                    spk2file_map[s].append(f)
+        if config.data.dataset=='VCTK':
+            for s in spk2id_map:
+                for f in train_files:
+                    if s in f:
+                        spk2file_map[s].append(f)
+        elif config.data.dataset=='DysarthricSim':
+            for f in file2spk_map:
+                spk = file2spk_map[f]
+                spk2file_map[spk].append(f)
         
         speakers = list(spk2file_map.keys())
 
@@ -203,12 +217,22 @@ class VCTKAngleProtoData(data.Dataset):
                     utters.append(spk2file_map[spk][0])
                     spk2file_map[spk].pop(0)
                 train_arranged.extend(utters)
-
+        
         print(f"> Number of train utterances: {len(train_arranged)}")
         train_spk_ids_arranged = []
+
+        if config.data.dataset=='DysarthricSim':
+            #Rearrange spk2id_map based on discarded speakers
+            train_speakers = list(set([file2spk_map[i] for i in train_arranged]))
+            spk2id_map = {s:i for i, s in enumerate(train_speakers)}
+    
         for i in train_arranged:
-            spk_id = i.split('/')[-1].split('_')[0]
+            if config.data.dataset=='VCTK':
+                spk_id = i.split('/')[-1].split('_')[0]
+            elif config.data.dataset=='DysarthricSim':
+                spk_id = file2spk_map[i]
             train_spk_ids_arranged.append(spk2id_map[spk_id])
+        print(f"> Number of unique speakers in train {len(set(train_spk_ids_arranged))}")
 
         self.train_files = train_arranged
         self.train_spk_ids = train_spk_ids_arranged

@@ -34,7 +34,7 @@ def run_training(config, config_path):
     if config.data.dataset=='LibriTTS':
         dataset = LibriTTSData(config, mode='train')
 
-    elif config.data.dataset=='VCTK' and config.model.model_name=='speaker_encoder':
+    elif (config.data.dataset=='VCTK' or config.data.dataset=='DysarthricSim') and config.model.model_name=='speaker_encoder':
         dataset = VCTKAngleProtoData(config, mode='train')
     else:
         dataset = VCTKData(config, mode='train')
@@ -99,8 +99,16 @@ def run_training(config, config_path):
 
     if config.model.model_name=='speaker_encoder':
         model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
+        ###DOTO: Make a function for restoring/freezing params
+        if not config.runner.restore_epoch and config.runner.spk_enc_path:
+            spk_enc_path = os.path.join(config.runner.spk_enc_path, 'best_model.pth')
+            spk_enc_weights = torch.load(spk_enc_path)
+            spk_enc_weights = move_device(spk_enc_weights)
+            model.load_state_dict(spk_enc_weights)
+            if config.model.freeze_spk_enc and config.model.freeze_layers:
+                freeze_params(feat_extractor, config.model.freeze_layers)
+
         criterion = SoftmaxAngleProtoLoss(embedding_dim=config.model.feat_encoder_dim, n_speakers=config.data.num_speakers)
-        #optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)
         if config.trainer.scheduler:
             lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.25)

@@ -5,7 +5,7 @@
         "train_partition":null,
         "test_partition":["7520", "3816", "922", "2254", "4490", "1311", "5123", "159", "7069", "1460", "8300", "6206", "7594", "6104", "339", "6965", "2240", "8459", "4733", "1343", "1498", "4434", "6317", "1933", "7518", "1811", "1740", "8228", "38", "8887", "8498", "7783", "3852", "6341", "1212", "7245", "1913", "7515", "2929", "1392", "3083", "1061", "3340", "296", "7555", "8118", "8722", "979", "6497", "1734", "6080", "2481", "2618", "340", "224", "5039", "3094", "8190", "246", "1365", "1473", "731", "7011", "249", "476", "724", "2999", "4427", "3294", "5389", "5604", "8791", "2368", "6509", "1446", "7816", "1413", "4054", "1337", "534", "203", "7733", "1052", "3686", "3967", "7498", "6567", "5062", "6924", "6075", "2093", "8421", "8183", "2397", "3171", "868", "6686", "7383", "1678", "2769", "5206"],
         "ignore_speakers":[null],
-        "num_speakers":null,
+        "num_speakers":800,
         "feature": "melspec",
         "feature_dim":80,
         "pitch":true,
@@ -13,7 +13,7 @@
     },
     "trainer":{
         "epoch":10000,
-        "batch_size":32,
+        "batch_size":16,
         "ckpt": null,
         "data_parallel": false,
         "scheduler":true,
@@ -23,17 +23,20 @@
         "model_name":"speaker_encoder",
         "feat_encoder_dim":512,
         "num_speakers":4,
-        "num_utter":8,
-        "hidden_dim":128
+        "num_utter":4,
+        "hidden_dim":128,
+        "freeze_spk_enc":false
     },
     "runner":{
         "wandb":false,
         "project_name": "dysarthric_vc",
-        "run_name":"spk_encoder_l2_norm_soft_ap_no_augment",
+        "run_name":"spk_encoder_l2_norm_soft_ap_no_augment_unfreeze",
         "entity":"anakuzne", 
         "log_config":true,
         "data_parallel":false,
         "cuda_device":[0, 1],
-        "ckpt_path":"/home/anakuzne/exp/spk_encoder/spk_enc1"
+        "restore_epoch":null,
+        "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1",
+        "ckpt_path":"/home/anakuzne/exp/spk_encoder/spk_enc_ft_d"
     }
 }
