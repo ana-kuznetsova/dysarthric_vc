@@ -179,8 +179,8 @@ class VCTKData(data.Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
         if self.mode=='train':
-            return (self.train_files[idx], self.train_spk_ids[idx])
-        return (self.test_files[idx], self.test_spk_ids[idx])
+            return (self.train_files[idx], self.train_spk_ids[idx], self.text_train[idx])
+        return (self.test_files[idx], self.test_spk_ids[idx], self.text_test[idx])
 
 
 class VCTKAngleProtoData(data.Dataset):
