@@ -19,16 +19,20 @@ import os
 
 
 def run_training(config, config_path):
+    torch.cuda.empty_cache()
 
     #wandb configs
     if config.runner.wandb:
-        wandb.init(project=config.runner.project_name, entity=config.runner.entity)
+        wandb.init(config=config)
+        #wandb.config(project=config.runner.project_name, entity=config.runner.entity)
+        wandb.project = config.runner.project_name
+        wandb.entity = config.runner.entity
         wandb.run.name = config.runner.run_name
         print(f"> Initialized run with run name {config.runner.run_name}")
-    if config.runner.log_config:
+    if config.runner.wandb and config.runner.log_config:
         with open(config_path, 'r') as fo:
             config_json = json.load(fo)
-        wandb.config = config_json
+        wandb.config.update = config_json
 
     ##Preload data
     if config.data.dataset=='LibriTTS':
@@ -106,7 +110,7 @@ def run_training(config, config_path):
             spk_enc_weights = move_device(spk_enc_weights)
             model.load_state_dict(spk_enc_weights)
             if config.model.freeze_spk_enc and config.model.unfreeze_layers:
-                freeze_params(feat_extractor, config.model.unfreeze_layers)
+                freeze_params(model, config.model.unfreeze_layers)
 
         criterion = SoftmaxAngleProtoLoss(embedding_dim=config.model.feat_encoder_dim, n_speakers=config.data.num_speakers)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)

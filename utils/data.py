@@ -149,11 +149,26 @@ class VCTKData(data.Dataset):
         self.mode = mode
         self.data_path = config.data.dataset_path
         
-        train_files, train_spk_ids, test_files, test_spk_ids, spk2id_map = filter_speakers(config)
+        train_files, train_spk_ids, test_files, test_spk_ids, spk2id_map, _ = filter_speakers(config)
         self.train_files = train_files
         self.train_spk_ids = train_spk_ids
         self.test_files = test_files
         self.test_spk_ids = test_spk_ids
+        self.text_train = []
+        self.text_test = []
+
+        with open(config.data.text_path, 'r') as fo:
+            text_dict = json.load(fo)
+
+        for f in train_files:
+            fname = f.split('/')[-1].replace('.wav', '')
+            sent = text_dict[fname]["label"]
+            self.text_train.append(sent)
+
+        for f in test_files:
+            fname = f.split('/')[-1].replace('.wav', '')
+            sent = text_dict[fname]["label"]
+            self.text_test.append(sent)
 
     def __len__(self):
         if self.mode=='train':

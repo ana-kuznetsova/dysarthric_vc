@@ -1,6 +1,7 @@
 {   "data":{
         "dataset":"VCTK",
         "dataset_path":"/data/common/vctk/wav48_silence_trimmed",
+        "text_path":"/home/anakuzne/utils/all.json",
         "train_partition":null,
         "test_partition":["p225", "p228", "p229", "p343", "p226", "p227", "p311", "p363"],
         "ignore_speakers":["s5"],

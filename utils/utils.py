@@ -49,9 +49,10 @@ def freeze_params(model, layers=None):
         for param in model.parameters():
             param.requires_grad = False
     else:
-        for name, param in model.named_parameters():
-            if layer not in name:
-                param.requires_grad = False
+        for layer in layers:
+            for name, param in model.named_parameters():
+                if layer not in name:
+                    param.requires_grad = False
 
 
 def get_features(name):
