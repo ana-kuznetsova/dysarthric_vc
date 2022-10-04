@@ -28,7 +28,6 @@ class GeneralEncoder(nn.Module):
     '''
 
     def __init__(self,
-                inp_feature_dim,
                 feature_extractor,
                 feat_extractor_dim,
                 hidden_dim, batch_size,
@@ -58,7 +57,7 @@ class GeneralEncoder(nn.Module):
         
 
 
-    def forward(self, x, t):
+    def forward(self, x):
         feats = self.feature_extractor(x)
 
         #All about speaker ID

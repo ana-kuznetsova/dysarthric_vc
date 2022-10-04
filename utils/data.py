@@ -362,7 +362,7 @@ def collate_spk_enc(data):
 
     taco_inputs = speechbrain.dataio.batch.PaddedBatch(taco_inputs)
 
-    return {"x":padded_mels, "spk_id":batch_speakers, "text":taco_inputs}
+    return {"x":padded_mels[0], "spk_id":batch_speakers[0], "text":taco_inputs}
 
 
 def pad_noise(speech, noise):
