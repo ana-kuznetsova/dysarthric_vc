@@ -14,7 +14,8 @@ class Tacotron2Conditional(Tacotron2):
         embedded_inputs = self.embedding(inputs).transpose(1, 2)
 
         encoder_outputs = self.encoder(embedded_inputs, input_lengths)
-
+        #Add condition embed here
+        print("Add condition embed here")
         mel_outputs, gate_outputs, alignments = self.decoder(
             encoder_outputs, targets, memory_lengths=input_lengths
         )

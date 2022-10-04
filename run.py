@@ -3,7 +3,7 @@ from modules.encoder import GeneralEncoder
 from modules.trainer import Trainer
 from modules.losses import EncLossGeneral
 from utils.eval import evaluate
-from utils.utils import move_device, freeze_params, get_features
+from utils.utils import move_device, freeze_params, get_features, init_encoder
 
 from torch.utils.data import random_split, DataLoader
 from TTS.encoder.models.resnet import ResNetSpeakerEncoder
@@ -126,47 +126,10 @@ def run_training(config, config_path):
 
     elif config.model.model_name=='general_encoder':
 
-        feat_extractor = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
-
-        if not config.runner.restore_epoch and config.runner.spk_enc_path:
-            spk_enc_path = os.path.join(config.runner.spk_enc_path, 'best_model.pth')
-            spk_enc_weights = torch.load(spk_enc_path)
-            spk_enc_weights = move_device(spk_enc_weights)
-            feat_extractor.load_state_dict(spk_enc_weights)
-            if config.model.freeze_spk_enc and config.model.unfreeze_layers:
-                freeze_params(feat_extractor, config.model.unfreeze_layers)
-            elif config.model.freeze_spk_enc:
-                freeze_params(feat_extractor)
-
-        model = GeneralEncoder(inp_feature_dim=config.model.feat_encoder_dim,
-                feature_extractor=feat_extractor,
-                feat_extractor_dim=config.model.feat_encoder_dim,
-                hidden_dim=config.model.hidden_dim, 
-                batch_size=config.trainer.batch_size, num_classes=config.data.num_speakers, mi=config.model.use_mi)
-
+        model = init_encoder(config)
         criterion = EncLossGeneral(mi=config.model.use_mi)
         optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
-
-        if config.runner.restore_epoch:
-            opt_path = os.path.join(config.runner.ckpt_path, f"optimizer_{config.runner.restore_epoch}.pth")
-            optimizer.load_state_dict(torch.load(opt_path))
-            model_path = os.path.join(config.runner.ckpt_path, f"model_{config.runner.restore_epoch}.pth")
-
-            ##Avoid pytorch bug from parallel training
-            state_dict = torch.load(model_path)
-            state_dict_new = {}
-
-            for k in state_dict:
-                k_new = k.replace("module.", '')
-                state_dict_new[k_new] = state_dict[k]
-            state_dict = state_dict_new
-            del state_dict_new
-            model.load_state_dict(state_dict)
         
-            print(f"Restarted previous experiment from epoch {config.runner.restore_epoch}")
-        #Register hooks to extract intermediate features
-        #model.global_pool.register_forward_hook(get_features('feats'))
-
         if config.trainer.scheduler:
             lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.25)
         else:

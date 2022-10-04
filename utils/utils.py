@@ -1,6 +1,8 @@
 import torch
 import os
 
+from TTS.encoder.models.resnet import ResNetSpeakerEncoder
+
 
 def find(files, num, obj):
     for f in files:
@@ -80,3 +82,53 @@ def shuffle_tensor(x, dim):
     idx = torch.randperm(x.size(dim))
     x = x[:, idx]
     return x
+
+def init_encoder(config):
+    '''
+    Initializes Encoder with ResNet as feature extractor
+    '''
+    
+    #Initialize ResNet
+    feat_extractor = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
+
+    #If starting from epoch=0
+    if not config.runner.restore_epoch and config.runner.spk_enc_path:
+        spk_enc_path = os.path.join(config.runner.spk_enc_path, 'best_model.pth')
+        spk_enc_weights = torch.load(spk_enc_path)
+        spk_enc_weights = move_device(spk_enc_weights)
+        feat_extractor.load_state_dict(spk_enc_weights)
+
+        if config.model.freeze_spk_enc and config.model.unfreeze_layers:
+            freeze_params(feat_extractor, config.model.unfreeze_layers)
+        elif config.model.freeze_spk_enc:
+            freeze_params(feat_extractor)
+
+    #Initialize General encoder
+
+    model = GeneralEncoder(inp_feature_dim=config.model.feat_encoder_dim,
+                feature_extractor=feat_extractor,
+                feat_extractor_dim=config.model.feat_encoder_dim,
+                hidden_dim=config.model.hidden_dim, 
+                batch_size=config.trainer.batch_size, num_classes=config.data.num_speakers, mi=config.model.use_mi)
+
+    if config.runner.restore_epoch:
+        opt_path = os.path.join(config.runner.ckpt_path, f"optimizer_{config.runner.restore_epoch}.pth")
+        optimizer.load_state_dict(torch.load(opt_path))
+        model_path = os.path.join(config.runner.ckpt_path, f"model_{config.runner.restore_epoch}.pth")
+
+        ##Avoid pytorch bug from parallel training
+        state_dict = torch.load(model_path)
+        state_dict_new = {}
+
+        for k in state_dict:
+            k_new = k.replace("module.", '')
+            state_dict_new[k_new] = state_dict[k]
+        state_dict = state_dict_new
+        del state_dict_new
+        model.load_state_dict(state_dict)
+        print(f"Restarted previous experiment from epoch {config.runner.restore_epoch}")
+
+        return model
+
+def init_decoder(config):
+    pass

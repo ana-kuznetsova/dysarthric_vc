@@ -30,8 +30,7 @@
     },
     "decoder":{
         "decoder_name":"tacotron2",
-        "source":"/home/anakuzne/exp/tacotron2/fine_tune/1234", 
-        "save_dir":"/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/"
+        "decoder_ckpt":"/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/model.ckpt"
     },
    "mi_estimator":{
         "x_dim":128,
