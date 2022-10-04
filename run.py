@@ -1,4 +1,4 @@
-from utils.data import LibriTTSData, collate_fn, collate_spk_enc, load_config, VCTKData, VCTKAngleProtoData, collate_spk_enc_augment
+from utils.data import LibriTTSData, collate_fn, collate_spk_enc, load_config, VCTKData, VCTKAngleProtoData, collate_spk_enc_augment, UASpeechData
 from modules.encoder import GeneralEncoder
 from modules.trainer import Trainer
 from modules.losses import EncLossGeneral
@@ -81,9 +81,14 @@ def run_training(config, config_path):
         train, val = random_split(dataset, [train_len, val_len], 
                                     generator=torch.Generator().manual_seed(42))
 
+        if config.data.augment:
+            train_collate = collate_spk_enc_augment
+        else:
+            train_collate = collate_spk_enc
+            
         train_loader = DataLoader(train,
                                     batch_size=config.trainer.batch_size, 
-                                    shuffle=True, collate_fn=collate_spk_enc_augment,
+                                    shuffle=True, collate_fn=train_collate,
                                     drop_last=True, num_workers=2, pin_memory=False
                                 )
         val_loader = DataLoader(val,
@@ -128,8 +133,8 @@ def run_training(config, config_path):
             spk_enc_weights = torch.load(spk_enc_path)
             spk_enc_weights = move_device(spk_enc_weights)
             feat_extractor.load_state_dict(spk_enc_weights)
-            if config.model.freeze_spk_enc and config.model.freeze_layers:
-                freeze_params(feat_extractor, config.model.freeze_layers)
+            if config.model.freeze_spk_enc and config.model.unfreeze_layers:
+                freeze_params(feat_extractor, config.model.unfreeze_layers)
             elif config.model.freeze_spk_enc:
                 freeze_params(feat_extractor)
 
@@ -177,18 +182,22 @@ def run_inference(config, out_dir):
 
     if config.data.dataset=='VCTK' and config.model.model_name=='speaker_encoder':
         dataset_test = VCTKAngleProtoData(config, mode='test')
-        test_loader = DataLoader(dataset_test, batch_size=config.trainer.batch_size, 
-                                    shuffle=False, collate_fn=collate_spk_enc,
-                                    drop_last=True, num_workers=2, pin_memory=False
-                                )
 
-        model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
+    elif config.data.dataset=='UASpeech':
+        dataset_test = UASpeechData(config)
 
-        trainer = Trainer(config)
-        trainer.inference(test_loader, model, 
-                         device=torch.device("cuda:0"), 
-                         parallel=config.runner.data_parallel,
-                         out_dir=out_dir)
+    test_loader = DataLoader(dataset_test, batch_size=config.trainer.batch_size, 
+                                shuffle=False, collate_fn=collate_spk_enc,
+                                drop_last=True, num_workers=2, pin_memory=False
+                            )
+
+    model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
+
+    trainer = Trainer(config)
+    trainer.inference(test_loader, model, 
+                        device=torch.device("cuda:0"), 
+                        parallel=config.runner.data_parallel,
+                        out_dir=out_dir)
 
 if __name__ == "__main__":
 

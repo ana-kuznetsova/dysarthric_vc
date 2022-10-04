@@ -11,6 +11,8 @@ import json
 from attrdict import AttrDict
 import random
 import pandas as pd
+import speechbrain
+from speechbrain.utils.text_to_sequence import text_to_sequence
 
 
 
@@ -60,7 +62,7 @@ def filter_speakers(config):
                     break    
             if flag==False:
                 train_files.append(f)
-        unique_speakers = os.listdir(configs.data.dataset_path)
+        unique_speakers = os.listdir(config.data.dataset_path)
     elif config.data.dataset=='DysarthricSim':
         with open(config.data.meta_path, 'r') as fo:
             meta = fo.readlines()
@@ -126,21 +128,18 @@ def filter_speakers(config):
 class UASpeechData(data.Dataset):
     def __init__(self, config, mode='test'):
         self.mode = mode
-        self.data_path = config.data.data_path
-        self.csv_path = config.data.csv_path
+        self.data_path = config.data.dataset_path
+        self.meta_path = config.data.meta_path
         self.files = []
         self.labels = []
 
-        df = pd.read(self.csv_path)
-        fnames = list(df['fnames'])
-        for root, d, files in os.walk(self.data_path):
-            for f in files:
-                if f in fnames:
-                    path = os.path.join(root, f)
-                    label = df[df['fname']==f]['level'].values[0]
-                    self.files.append(path)
-                    self.labels.append(label)
-
+        df = pd.read_csv(self.meta_path)
+        for i, row in df.iterrows():
+            spk_id = row['fname'].split('_')[0]
+            path = os.path.join(self.data_path, spk_id, row['fname'])
+            self.files.append(path)
+            self.labels.append(row['level'])
+        print(f"> Found {len(self.files)} files...")
     def __len__(self):
         return len(self.files)
     
@@ -190,8 +189,13 @@ class VCTKData(data.Dataset):
 
         for f in train_files:
             fname = f.split('/')[-1].replace('.wav', '')
-            sent = text_dict[fname]["label"]
-            self.text_train.append(sent)
+            try:
+                sent = text_dict[fname]["label"]
+                self.text_train.append(sent)
+            except KeyError:
+                #print(fname)
+                train_files.remove(f)
+                continue
 
         for f in test_files:
             fname = f.split('/')[-1].replace('.wav', '')
@@ -329,22 +333,36 @@ def collate_spk_enc(data):
     sr=16000
     mel_specs = []
     transform = transforms.MelSpectrogram(sr, n_mels=80)
+    text_cleaners = ["english_cleaners"]
 
     for fname in data:
-        #wav, fs = librosa.load(fname[0], sr=16000)
         wav, _ = torchaudio.load(fname[0])
-        #spec = librosa.feature.melspectrogram(y=wav, sr=fs, n_mels=80)
         spec = transform(wav)
-        #mel_specs.append(torch.Tensor(spec))
         mel_specs.append(spec)
     
     maxlen_mel = max([i.shape[-1] for i in mel_specs])
     padded_mels = [nn.ZeroPad2d(padding=(0, maxlen_mel - i.shape[-1], 0, 0))(i) for i in mel_specs]
+    padded_mels = torch.stack(padded_mels)
     
     batch_speakers = torch.Tensor([i[1] for i in data]).long()
+    texts = [i[2] for i in data]
 
+    #For TTS input
+    
+    taco_inputs = [{"text_sequences":torch.tensor(text_to_sequence(item, text_cleaners))} for item in texts]
+    lens = [i['text_sequences'].shape[0] for i in taco_inputs]
+    #Sort by text len
+    batch = list(zip(padded_mels, batch_speakers, taco_inputs, lens))
 
-    return {"x":torch.stack(padded_mels), "spk_id":batch_speakers}
+    def last(n):
+        return n[-1] 
+
+    batch = sorted(batch, key=last, reverse=True)
+    padded_mels, batch_speakers, taco_inputs, lens = zip(*batch)
+
+    taco_inputs = speechbrain.dataio.batch.PaddedBatch(taco_inputs)
+
+    return {"x":padded_mels, "spk_id":batch_speakers, "text":taco_inputs}
 
 
 def pad_noise(speech, noise):

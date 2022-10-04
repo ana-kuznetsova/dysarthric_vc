@@ -1,0 +1,34 @@
+{   "data":{
+    "dataset":"UASpeech",
+    "dataset_path":"/data/common/ifp-08.ifp.uiuc.edu/protected/UASpeech/audio",
+    "meta_path":"/data/common/ifp-08.ifp.uiuc.edu/protected/UASpeech/UASpeech.csv",
+    "train_partition":null,
+    "ignore_speakers":[null],
+    "num_speakers":14,
+    "feature": "melspec",
+    "feature_dim":80,
+    "pitch":false,
+    "augment":false
+},
+"model":{
+    "model_name":"speaker_encoder",
+    "feat_encoder_dim":512,
+    "num_speakers":4,
+    "num_utter":8,
+    "hidden_dim":128
+},
+"trainer":{
+    "epoch":10000,
+    "batch_size":4,
+    "ckpt": null,
+    "data_parallel": false,
+    "scheduler":false,
+    "lr":0.0001
+},
+"runner":{
+    "data_parallel":false,
+    "ckpt_path":"/home/anakuzne/exp/spk_encoder/spk_enc_ft_d_v1_unfreeze_all",
+    "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1",
+    "restore_epoch":"best_model.pth"
+}
+}

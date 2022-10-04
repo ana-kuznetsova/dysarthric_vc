@@ -1,5 +1,5 @@
-#from speechbrain.pretrained import Tacotron2
-from speechbrain.lobes.models.Tacotron2 import Tacotron2
+from speechbrain.pretrained import Tacotron2
+#from speechbrain.lobes.models.Tacotron2 import Tacotron2
 import torch
 import yaml
 
@@ -30,6 +30,11 @@ class Tacotron2Conditional(Tacotron2):
         )
 
 
-ckpt =  "/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/model.ckpt"
-model = Tacotron2Conditional() 
-print(model)
+#ckpt =  "/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/model.ckpt"
+#model = Tacotron2Conditional() 
+#print(model)
+taco_ckpt = '/home/anakuzne/exp/tacotron2/fine_tune/1234'
+taco = Tacotron2.from_hparams(source=taco_ckpt, 
+                                   savedir="/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/",
+                                   run_opts={"device":"cuda"})
+print(taco.text_cleaners)

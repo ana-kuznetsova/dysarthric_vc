@@ -30,7 +30,6 @@ class GeneralEncoder(nn.Module):
     def __init__(self,
                 inp_feature_dim,
                 feature_extractor,
-                decoder,
                 feat_extractor_dim,
                 hidden_dim, batch_size,
                 num_classes,
@@ -41,7 +40,6 @@ class GeneralEncoder(nn.Module):
 
         self.batch_size = batch_size
         self.feature_extractor = feature_extractor
-        self.decoder = decoder
         self.speaker_encoder = MLP(feat_extractor_dim, 
                                    hidden_dim, hidden_dim)
         self.speaker_cls = nn.Linear(hidden_dim, num_classes)

@@ -268,7 +268,9 @@ class Trainer():
             model = model.to(device)
             model = torch.nn.DataParallel(model, device_ids=devices)
         
-        restore(self.config, model, None, None, 'test')
+        #Load checkpoint
+        ckpt_path = os.path.join(self.config.runner.ckpt_path, self.config.runner.restore_epoch)
+        model.load_state_dict(torch.load(ckpt_path))
 
         
         if self.config.model.model_name=='speaker_encoder':
