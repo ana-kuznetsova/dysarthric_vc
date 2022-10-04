@@ -27,6 +27,11 @@
         "freeze_spk_enc":true,
         "use_mi": false
     },
+    "decoder":{
+        "decoder_name":"tacotron2",
+        "source":"/home/anakuzne/exp/tacotron2/fine_tune/1234", 
+        "save_dir":"/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/"
+    },
    "mi_estimator":{
         "x_dim":128,
         "y_dim":128,

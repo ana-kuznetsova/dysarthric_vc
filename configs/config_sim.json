@@ -16,7 +16,7 @@
         "batch_size":8,
         "ckpt": null,
         "data_parallel": false,
-        "scheduler":true,
+        "scheduler":false,
         "lr":0.0001
     },
     "model":{
@@ -25,19 +25,19 @@
         "num_speakers":4,
         "num_utter":2,
         "hidden_dim":128,
-        "freeze_spk_enc":true,
-        "unfreeze_layers":["layer4"]
+        "freeze_spk_enc":false,
+        "unfreeze_layers":[null]
     },
     "runner":{
         "wandb":true,
         "project_name": "dysarthric_vc",
-        "run_name":"spk_encoder_l2_norm_soft_ap_no_augment_unfreeze4",
+        "run_name":"spk_encoder_l2_norm_soft_ap_no_augment_unfreeze_all_no_sched",
         "entity":"anakuzne", 
         "log_config":true,
         "data_parallel":false,
         "cuda_device":[0, 1],
         "restore_epoch":null,
         "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1",
-        "ckpt_path":"/home/anakuzne/exp/spk_encoder/spk_enc_ft_d_v1_unfreeze4"
+        "ckpt_path":"/home/anakuzne/exp/spk_encoder/spk_enc_ft_d_v1_unfreeze_all_no_sched"
     }
 }

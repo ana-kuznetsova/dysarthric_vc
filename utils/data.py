@@ -10,6 +10,7 @@ import parselmouth
 import json
 from attrdict import AttrDict
 import random
+import pandas as pd
 
 
 
@@ -120,6 +121,33 @@ def filter_speakers(config):
     if config.data.dataset=='VCTK':
         return train_files, train_spk_ids,  test_files, test_spk_ids, spk2id_map, None
     return train_files, train_spk_ids,  test_files, test_spk_ids, spk2id_map, file2spk_map
+
+
+class UASpeechData(data.Dataset):
+    def __init__(self, config, mode='test'):
+        self.mode = mode
+        self.data_path = config.data.data_path
+        self.csv_path = config.data.csv_path
+        self.files = []
+        self.labels = []
+
+        df = pd.read(self.csv_path)
+        fnames = list(df['fnames'])
+        for root, d, files in os.walk(self.data_path):
+            for f in files:
+                if f in fnames:
+                    path = os.path.join(root, f)
+                    label = df[df['fname']==f]['level'].values[0]
+                    self.files.append(path)
+                    self.labels.append(label)
+
+    def __len__(self):
+        return len(self.files)
+    
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        return (self.files[idx], self.labels[idx])
 
 
 class LibriTTSData(data.Dataset):
