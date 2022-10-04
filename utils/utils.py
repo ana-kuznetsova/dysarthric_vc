@@ -2,6 +2,8 @@ import torch
 import os
 
 from TTS.encoder.models.resnet import ResNetSpeakerEncoder
+from modules.encoder import GeneralEncoder
+from modules.decoder import Tacotron2Conditional
 
 
 def find(files, num, obj):
@@ -130,4 +132,10 @@ def init_encoder(config):
     return model
 
 def init_decoder(config):
-    pass
+    decoder = Tacotron2Conditional()
+    decoder.load_state_dict(torch.load(config.decoder.ckpt))
+
+    if config.decoder.freeze_decoder:
+        freeze_params(decoder)
+
+    return decoder

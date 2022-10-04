@@ -34,7 +34,7 @@
     },
     "decoder":{
         "model_name":"tacotron2",
-        "decoder_ckpt":"/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/model.ckpt",
+        "ckpt":"/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/model.ckpt",
         "freeze_decoder":true,
         "unfreeze_layers":null
     },
