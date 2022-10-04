@@ -17,7 +17,9 @@
         "scheduler":false,
         "lr":0.0001
     },
-    "model":{},
+    "model":{
+        "model_name":"joint_vc"
+    },
     "encoder":{
         "model_name":"general_encoder",
         "feat_encoder_dim":512,

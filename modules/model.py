@@ -2,24 +2,18 @@ from modules.encoder import GeneralEncoder
 from modules.decoder import Tacotron2Conditional
 
 
-
-
-class EncoderDecoder(nn.Module):
+class JointVC(nn.Module):
     '''
     E2E encoder decoder model for spkeaker attr disentanglement
     Decoder: Tacotron2 should be initialized with pretrained weights
     '''
 
     def __init__(self,
-                feature_extractor,
+                encoder,
                 decoder,
-                feat_extractor_dim,
-                hidden_dim, batch_size
     ):
         super(EncoderDecoder, self).__init__()
-        self.encoder = GeneralEncoder(feat_extractor, 
-                                      feat_extractor_dim, 
-                                      hidden_dim, batch_size, num_classes)
+        self.encoder = encoder
         self.decoder = decoder
 
     def forward(self, x, t):

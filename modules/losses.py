@@ -58,33 +58,23 @@ class CLUB(nn.Module):  # CLUB: Mutual Information Contrastive Learning Upper Bo
 
 
 
-class EncLossGeneral(nn.Module):
+class LossGeneral(nn.Module):
     '''
     This class computes the loss over basic setup of the encoder
     The loss is the weighted sum over embedding reconstru
     '''
-    def __init__(self, alpha1=1, alpha2=1, alpha_mi=1, mi=False):
+    def __init__(self, alpha1=1, alpha2=1):
         super(EncLossGeneral, self).__init__()
         self.alpha1 = alpha1
         self.alpha2 = alpha2
-        self.alpha_mi = alpha_mi
         self.rc_loss = nn.L1Loss()
         self.spk_ce_loss = nn.CrossEntropyLoss()
-        self.mi = mi
 
-    def forward(self, outs, cls_target, mi_estimator):
-        feats = outs['feats']
-        rc_feats = outs['proj']
+    def forward(self, x, cls_target, outs):
+        mels_pred = outs['mel_outputs']
         cls_out = outs['spk_cls']
-        x_mi = outs["spk_emb"]
-        y_mi = outs["attr_emb"]
-        y_mi = shuffle_tensor(y_mi, 1)
-
-        loss_1 = self.alpha1*self.rc_loss(feats, rc_feats)
+       
+        loss_1 = self.alpha1*self.rc_loss(x, mels_pred)
         loss_2 = self.alpha2*self.spk_ce_loss(cls_out, cls_target)
-        if not self.mi:
-            total_loss = loss_1 + loss_2
-            return total_loss, loss_1, loss_2, 0
-        mi_loss = self.alpha_mi*(mi_estimator(x_mi, y_mi))
-        total_loss = loss_1 + loss_2 + mi_loss
-        return total_loss, loss_1, loss_2, mi_loss
+        total_loss = loss_1 + loss_2
+        return total_loss, loss_1, loss_2

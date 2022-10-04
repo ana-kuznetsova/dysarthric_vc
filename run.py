@@ -1,9 +1,10 @@
 from utils.data import LibriTTSData, collate_fn, collate_spk_enc, load_config, VCTKData, VCTKAngleProtoData, collate_spk_enc_augment, UASpeechData
 from modules.encoder import GeneralEncoder
 from modules.trainer import Trainer
-from modules.losses import EncLossGeneral
+from modules.losses import LossGeneral
+from modules.model import JointVC
 from utils.eval import evaluate
-from utils.utils import move_device, freeze_params, get_features, init_encoder
+from utils.utils import move_device, freeze_params, get_features, init_encoder, init_decoder
 
 from torch.utils.data import random_split, DataLoader
 from TTS.encoder.models.resnet import ResNetSpeakerEncoder
@@ -123,17 +124,28 @@ def run_training(config, config_path):
             lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.25)
         else:
             lr_scheduler = None
-
+    '''
     elif config.model.model_name=='general_encoder':
 
         model = init_encoder(config)
-        criterion = EncLossGeneral(mi=config.model.use_mi)
+        criterion = LossGeneral(mi=config.model.use_mi)
         optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
-        
+
         if config.trainer.scheduler:
             lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.25)
         else:
             lr_scheduler = None
+    '''
+    
+    elif config.model_name.model == 'joint_vc':
+        #Initialize encoder
+        encoder = init_encoder(config)
+        decoder = init_decoder(config)
+        model = JointVC(encoder, decoder)
+
+        criterion = LossGeneral()
+        optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
+
 
     trainer = Trainer(config)
     trainer.train(train_loader, val_loader, 

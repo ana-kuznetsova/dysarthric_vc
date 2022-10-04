@@ -130,7 +130,7 @@ class Trainer():
         #### General Encoder Training###
         ########################################
 
-        if self.config.model.model_name=='general_encoder':
+        if self.config.model.model_name=='joint_vc':
             #torch.set_num_threads(1)
             #print(f"Num threads: {torch.get_num_threads()}")
             if self.config.runner.restore_epoch:
@@ -142,15 +142,6 @@ class Trainer():
             prev_val_loss = 0
             no_improvement = 0
 
-            if self.config.model.use_mi:
-                mi_estimator = CLUB(self.config.mi_estimator.x_dim, 
-                                    self.config.mi_estimator.y_dim,
-                                    self.config.mi_estimator.hidden_dim).to(device)
-                mi_optimizer = torch.optim.Adam(mi_estimator.parameters(), lr=1e-4)
-            else:
-                mi_estimator = None
-                mi_optimizer = None
-
 
             while ep < self.config.trainer.epoch:
                 print(f"Starting [epoch]:{ep+1}/{self.config.trainer.epoch}")
@@ -160,14 +151,12 @@ class Trainer():
                 epoch_mi_loss = 0
                 epoch_mi_learn_loss = 0
                 for i, batch in enumerate(train_loader):
-                    if self.config.model.use_mi:
-                        mi_estimator.eval()
                     x = batch['x'].to(device)
-                    #p = batch['p'].to(device)
+                    t = batch['text'].to(device)
                     spk_true = batch['spk_id'].to(device)
                     optimizer.zero_grad()
-                    outs = model(x)
-                    loss, l1, l2, mi_loss = criterion(outs, spk_true, mi_estimator)
+                    outs = model(x, t)
+                    loss, l1, l2 =  criterion(x,  spk_true, outs)
                     loss.backward()
                     optimizer.step()
                     if scheduler:
@@ -176,24 +165,7 @@ class Trainer():
                     epoch_train_loss+=loss.data
                     epoch_train_loss_1+=l1.data
                     epoch_train_loss_2+=l2.data
-                    #epoch_mi_loss+=mi_loss.data
-
-                    #MI estimator training
-
-                    if self.config.model.use_mi:
-                        for i in range(self.config.mi_estimator.mi_iter):
-                            mi_estimator.train()
-                            x = batch['x'].to(device)
-                            outs = model(x)
-                            x = outs["spk_emb"]
-                            y =  outs["attr_emb"]
-                            y = shuffle_tensor(y, dim=1)
-                            mi_learn_loss = mi_estimator.learning_loss(x, y)
-                            epoch_mi_learn_loss+=mi_loss.data
-                            mi_learn_loss.backward()
-                            mi_optimizer.step()
-                        epoch_mi_learn_loss/= self.config.mi_estimator.mi_iter
-
+                
                 epoch_train_loss/=len(train_loader)
                 epoch_train_loss_1/=len(train_loader)
                 epoch_train_loss_2/=len(train_loader)
@@ -208,8 +180,9 @@ class Trainer():
                         x = batch['x'].to(device)
                         #p = batch['p'].to(device)
                         spk_true = batch['spk_id'].to(device)
-                        outs = model(x)
-                        loss, l1, l2, mi_loss = criterion(outs, spk_true, mi_estimator)
+                        t = batch['text'].to(device)
+                        outs = model(x, t)
+                        loss, l1, l2, mi_loss = criterion(x, spk_true, outs)
                         val_loss+=loss.data
                         val_loss_1+=l1.data
                         val_loss_2+=l2.data
@@ -224,7 +197,6 @@ class Trainer():
                     wandb.log({"train_loss": epoch_train_loss.data,
                                "val_loss": val_loss.data, "l1_rc":epoch_train_loss_1,
                                 "ce_loss":epoch_train_loss_2,
-                                "mi_loss":epoch_mi_loss,
                                 "val_l1_rc_loss":val_loss_1,
                                 "val_ce_loss":val_loss_2})
                 if val_loss < prev_val_loss:
