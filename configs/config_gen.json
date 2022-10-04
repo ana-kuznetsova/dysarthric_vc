@@ -17,7 +17,8 @@
         "scheduler":false,
         "lr":0.0001
     },
-    "model":{
+    "model":{},
+    "encoder":{
         "model_name":"general_encoder",
         "feat_encoder_dim":512,
         "num_speakers":4,
@@ -26,11 +27,16 @@
         "feat_extractor":"speaker_encoder",
         "freeze_spk_enc":true,
         "unfreeze_layers":null,
-        "use_mi": false
+        "use_mi": false,
+        "ckpt_path":"/home/anakuzne/exp/general_encoder/gen_enc_v3",
+        "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1",
+        "restore_epoch":null
     },
     "decoder":{
-        "decoder_name":"tacotron2",
-        "decoder_ckpt":"/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/model.ckpt"
+        "model_name":"tacotron2",
+        "decoder_ckpt":"/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/model.ckpt",
+        "freeze_decoder":true,
+        "unfreeze_layers":null
     },
    "mi_estimator":{
         "x_dim":128,
@@ -45,9 +51,6 @@
         "entity":"anakuzne", 
         "log_config":true,
         "data_parallel":false,
-        "cuda_device":[0, 1],
-        "ckpt_path":"/home/anakuzne/exp/general_encoder/gen_enc_v3",
-        "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1",
-        "restore_epoch":null
+        "cuda_device":[0, 1]
     }
 }

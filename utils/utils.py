@@ -88,33 +88,33 @@ def init_encoder(config):
     Initializes Encoder with ResNet as feature extractor
     '''
     
-    #Initialize ResNet
+    #Initialize ResNet as feat extractor
     feat_extractor = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
 
     #If starting from epoch=0
-    if not config.runner.restore_epoch and config.runner.spk_enc_path:
-        spk_enc_path = os.path.join(config.runner.spk_enc_path, 'best_model.pth')
+    if not config.encoder.restore_epoch and config.encoder.spk_enc_path:
+        spk_enc_path = os.path.join(config.encoder.spk_enc_path, 'best_model.pth')
         spk_enc_weights = torch.load(spk_enc_path)
         spk_enc_weights = move_device(spk_enc_weights)
         feat_extractor.load_state_dict(spk_enc_weights)
 
-        if config.model.freeze_spk_enc and config.model.unfreeze_layers:
+        if config.encoder.freeze_spk_enc and config.encoder.unfreeze_layers:
             freeze_params(feat_extractor, config.model.unfreeze_layers)
-        elif config.model.freeze_spk_enc:
+        elif config.encoder.freeze_spk_enc:
             freeze_params(feat_extractor)
 
     #Initialize General encoder
 
-    model = GeneralEncoder(inp_feature_dim=config.model.feat_encoder_dim,
+    model = GeneralEncoder(inp_feature_dim=config.encoder.feat_encoder_dim,
                 feature_extractor=feat_extractor,
-                feat_extractor_dim=config.model.feat_encoder_dim,
-                hidden_dim=config.model.hidden_dim, 
-                batch_size=config.trainer.batch_size, num_classes=config.data.num_speakers, mi=config.model.use_mi)
+                feat_extractor_dim=config.encoder.feat_encoder_dim,
+                hidden_dim=config.encoder.hidden_dim, 
+                batch_size=config.trainer.batch_size, num_classes=config.data.num_speakers, mi=config.encoder.use_mi)
 
-    if config.runner.restore_epoch:
-        opt_path = os.path.join(config.runner.ckpt_path, f"optimizer_{config.runner.restore_epoch}.pth")
+    if config.encoder.restore_epoch:
+        opt_path = os.path.join(config.encoder.ckpt_path, f"optimizer_{config.encoder.restore_epoch}.pth")
         optimizer.load_state_dict(torch.load(opt_path))
-        model_path = os.path.join(config.runner.ckpt_path, f"model_{config.runner.restore_epoch}.pth")
+        model_path = os.path.join(config.encoder.ckpt_path, f"model_{config.encoder.restore_epoch}.pth")
 
         ##Avoid pytorch bug from parallel training
         state_dict = torch.load(model_path)
@@ -127,8 +127,7 @@ def init_encoder(config):
         del state_dict_new
         model.load_state_dict(state_dict)
         print(f"Restarted previous experiment from epoch {config.runner.restore_epoch}")
-
-        return model
+    return model
 
 def init_decoder(config):
     pass
