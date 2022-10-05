@@ -325,7 +325,6 @@ def collate_fn(data):
 
     return {"x":torch.stack(padded_mels), "p": torch.stack(padded_pitch), "spk_id":batch_speakers}
 
-
 def collate_spk_enc(data):
     '''
     For batch
@@ -333,6 +332,30 @@ def collate_spk_enc(data):
     sr=16000
     mel_specs = []
     transform = transforms.MelSpectrogram(sr, n_mels=80)
+    for fname in data:
+        #wav, fs = librosa.load(fname[0], sr=16000)
+        wav, _ = torchaudio.load(fname[0])
+        #spec = librosa.feature.melspectrogram(y=wav, sr=fs, n_mels=80)
+        spec = transform(wav)
+        #mel_specs.append(torch.Tensor(spec))
+        mel_specs.append(spec)
+    
+    maxlen_mel = max([i.shape[-1] for i in mel_specs])
+    padded_mels = [nn.ZeroPad2d(padding=(0, maxlen_mel - i.shape[-1], 0, 0))(i) for i in mel_specs]
+    
+    batch_speakers = torch.Tensor([i[1] for i in data]).long()
+    return {"x":torch.stack(padded_mels), "spk_id":batch_speakers}
+
+def collate_spk_enc_vc(data):
+    '''
+    For batch
+    '''
+    sr=16000
+    mel_specs = []
+    transform = transforms.MelSpectrogram(sr, n_mels=80, f_min=0.0, 
+                                         f_max=8000.0, hop_length=256,
+                                         win_length=1024, n_fft=1024, normalized=True,
+                                         norm='slaney', mel_scale='slaney')
     text_cleaners = ["english_cleaners"]
 
     for fname in data:
@@ -350,19 +373,24 @@ def collate_spk_enc(data):
     #For TTS input
     
     taco_inputs = [{"text_sequences":torch.tensor(text_to_sequence(item, text_cleaners))} for item in texts]
+    taco_targets = [{"mel_specs":torch.transpose(i.squeeze(0), 0, 1)} for i in mel_specs]
     lens = [i['text_sequences'].shape[0] for i in taco_inputs]
     #Sort by text len
-    batch = list(zip(padded_mels, batch_speakers, taco_inputs, lens))
+    batch = list(zip(padded_mels, batch_speakers, taco_inputs, taco_targets, lens))
 
     def last(n):
         return n[-1] 
 
     batch = sorted(batch, key=last, reverse=True)
-    padded_mels, batch_speakers, taco_inputs, lens = zip(*batch)
+    padded_mels, batch_speakers, taco_inputs, taco_targets, lens = zip(*batch)
+    padded_mels = torch.stack(list(padded_mels)).squeeze(1)
+    
+    batch_speakers = torch.stack(list(batch_speakers))
 
     taco_inputs = speechbrain.dataio.batch.PaddedBatch(taco_inputs)
+    taco_targets =  speechbrain.dataio.batch.PaddedBatch(taco_targets)
 
-    return {"x":padded_mels[0], "spk_id":batch_speakers[0], "text":taco_inputs}
+    return {"x":padded_mels, "spk_id":batch_speakers, "text":taco_inputs, "target":taco_targets}
 
 
 def pad_noise(speech, noise):

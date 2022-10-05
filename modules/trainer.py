@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import tqdm
 from utils.utils import optimizer_to, shuffle_tensor
 from modules.losses import CLUB
+from modules.decoder import Interface
 
 class Trainer():
     def __init__(self, configs):
@@ -25,7 +26,8 @@ class Trainer():
               optimizer,
               scheduler,
               device, 
-              parallel=False):
+              parallel=False,
+              **kwargs):
 
 
         if not parallel:
@@ -127,13 +129,11 @@ class Trainer():
 
 
         ########################################
-        #### General Encoder Training###
+        #### Joint VC Training###
         ########################################
 
         if self.config.model.model_name=='joint_vc':
-            #torch.set_num_threads(1)
-            #print(f"Num threads: {torch.get_num_threads()}")
-            if self.config.runner.restore_epoch:
+            if self.config.model.restore_epoch:
                 ep = self.config.runner.restore_epoch
                 optimizer_to(optimizer, device)
             else:
@@ -141,6 +141,8 @@ class Trainer():
             step = 0
             prev_val_loss = 0
             no_improvement = 0
+            interface = Interface()
+            interface = interface.to(device)
 
 
             while ep < self.config.trainer.epoch:
@@ -152,11 +154,13 @@ class Trainer():
                 epoch_mi_learn_loss = 0
                 for i, batch in enumerate(train_loader):
                     x = batch['x'].to(device)
-                    t = batch['text'].to(device)
+                    text = batch['text'].to(device)
+                    target = batch["target"].to(device)
                     spk_true = batch['spk_id'].to(device)
                     optimizer.zero_grad()
-                    outs = model(x, t)
+                    outs = model(x, text, target, interface)
                     loss, l1, l2 =  criterion(x,  spk_true, outs)
+                    print(loss)
                     loss.backward()
                     optimizer.step()
                     if scheduler:
@@ -182,7 +186,7 @@ class Trainer():
                         spk_true = batch['spk_id'].to(device)
                         t = batch['text'].to(device)
                         outs = model(x, t)
-                        loss, l1, l2, mi_loss = criterion(x, spk_true, outs)
+                        loss, l1, l2, mi_loss = criterion(x, spk_true, outs, interface)
                         val_loss+=loss.data
                         val_loss_1+=l1.data
                         val_loss_2+=l2.data
@@ -202,6 +206,7 @@ class Trainer():
                 if val_loss < prev_val_loss:
                     #Save checkpoint and lr_sched state
                     torch.save(model.state_dict(), os.path.join(self.config.runner.ckpt_path, "best_model.pth"))
+                    torch.save(interface.state_dict(), os.path.join(self.config.runner.ckpt_path, "best_interface.pth"))
                     torch.save(optimizer.state_dict(), os.path.join(self.config.runner.ckpt_path, "optimizer.pth"))
                     if scheduler:
                         torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, "scheduler.pth"))
@@ -218,9 +223,11 @@ class Trainer():
                     sched_path = f"scheduler_{ep}.pth"
                     opt_path = f"optimizer_{ep}.pth"
                     model_path = f"model_{ep}.pth"
+                    interface_path = f"interface_{ep}.pth"
 
                     torch.save(model.state_dict(), os.path.join(self.config.runner.ckpt_path, model_path))
                     torch.save(optimizer.state_dict(), os.path.join(self.config.runner.ckpt_path, opt_path))
+                    torch.save(interface.state_dict(), os.path.join(self.config.runner.ckpt_path, interface_path))
                     if scheduler:
                         torch.save(scheduler.state_dict(), os.path.join(self.config.runner.ckpt_path, sched_path))
                 ep+=1

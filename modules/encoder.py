@@ -59,7 +59,6 @@ class GeneralEncoder(nn.Module):
 
     def forward(self, x):
         feats = self.feature_extractor(x)
-
         #All about speaker ID
         spk_embed = self.speaker_encoder(feats)
         spk_embed = self.activation_1(spk_embed)

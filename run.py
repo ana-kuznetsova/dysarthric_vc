@@ -1,4 +1,4 @@
-from utils.data import LibriTTSData, collate_fn, collate_spk_enc, load_config, VCTKData, VCTKAngleProtoData, collate_spk_enc_augment, UASpeechData
+from utils.data import LibriTTSData, collate_fn, collate_spk_enc, load_config, VCTKData, VCTKAngleProtoData, collate_spk_enc_augment, UASpeechData, collate_spk_enc_vc
 from modules.encoder import GeneralEncoder
 from modules.trainer import Trainer
 from modules.losses import LossGeneral
@@ -82,11 +82,16 @@ def run_training(config, config_path):
         train, val = random_split(dataset, [train_len, val_len], 
                                     generator=torch.Generator().manual_seed(42))
 
-        if config.data.augment:
-            train_collate = collate_spk_enc_augment
-        else:
-            train_collate = collate_spk_enc
-            
+        if config.model.model_name=='speaker_encoder':
+            if config.data.augment:
+                train_collate = collate_spk_enc_augment
+            else:
+                train_collate = collate_spk_enc
+            val_collate = collate_spk_enc
+        elif config.model.model_name=='joint_vc':
+            train_collate = collate_spk_enc_vc
+            val_collate = collate_spk_enc_vc
+
         train_loader = DataLoader(train,
                                     batch_size=config.trainer.batch_size, 
                                     shuffle=True, collate_fn=train_collate,
@@ -94,7 +99,7 @@ def run_training(config, config_path):
                                 )
         val_loader = DataLoader(val,
                                     batch_size=config.trainer.batch_size, 
-                                    shuffle=True, collate_fn=collate_spk_enc,
+                                    shuffle=True, collate_fn=val_collate,
                                     drop_last=True, num_workers=2, pin_memory=False
                                 )
 
@@ -124,27 +129,16 @@ def run_training(config, config_path):
             lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.25)
         else:
             lr_scheduler = None
-    '''
-    elif config.model.model_name=='general_encoder':
-
-        model = init_encoder(config)
-        criterion = LossGeneral(mi=config.model.use_mi)
-        optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
-
-        if config.trainer.scheduler:
-            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.25)
-        else:
-            lr_scheduler = None
-    '''
     
-    elif config.model_name.model == 'joint_vc':
+    elif config.model.model_name == 'joint_vc':
         #Initialize encoder
         encoder = init_encoder(config)
         decoder = init_decoder(config)
         model = JointVC(encoder, decoder)
-
+        ## Initialize attention scheduler
         criterion = LossGeneral()
         optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
+        lr_scheduler = None
 
 
     trainer = Trainer(config)

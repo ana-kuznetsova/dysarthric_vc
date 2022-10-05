@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from  torch.nn import functional as F
 from utils.utils import shuffle_tensor
+from speechbrain.lobes.models.Tacotron2 import Loss as TacoLoss
 
 class CLUB(nn.Module):  # CLUB: Mutual Information Contrastive Learning Upper Bound
     '''
@@ -63,18 +64,40 @@ class LossGeneral(nn.Module):
     This class computes the loss over basic setup of the encoder
     The loss is the weighted sum over embedding reconstru
     '''
-    def __init__(self, alpha1=1, alpha2=1):
-        super(EncLossGeneral, self).__init__()
+    def __init__(self, alpha1=1, alpha2=1, guided_attention_scheduler=None):
+        super(LossGeneral, self).__init__()
         self.alpha1 = alpha1
         self.alpha2 = alpha2
         self.rc_loss = nn.L1Loss()
         self.spk_ce_loss = nn.CrossEntropyLoss()
+        '''
+            gate_loss_weight: 1.0
+            guided_attention_weight: 50.0
+            guided_attention_sigma: 0.2
+            guided_attention_scheduler: *id001
+            guided_attention_hard_stop: 50
+
+            guided_attention_sigma=None,
+            gate_loss_weight=1.0,
+            guided_attention_weight=1.0,
+            guided_attention_scheduler=None,
+            guided_attention_hard_stop=None,
+
+        '''
+        self.taco_loss = TacoLoss(guided_attention_sigma=0.2,
+                                  gate_loss_weight=1.0
+                                  guided_attention_weight=50.0,
+                                  guided_attention_scheduler=guided_attention_scheduler,
+                                  guided_attention_hard_stop=10.0
+                                  )
 
     def forward(self, x, cls_target, outs):
         mels_pred = outs['mel_outputs']
+        mels_pred_postnet = outs['mel_outputs_postnet']
         cls_out = outs['spk_cls']
        
         loss_1 = self.alpha1*self.rc_loss(x, mels_pred)
         loss_2 = self.alpha2*self.spk_ce_loss(cls_out, cls_target)
-        total_loss = loss_1 + loss_2
-        return total_loss, loss_1, loss_2
+        taco_loss = self.taco_loss(mels_pred, mels_pred_postnet)
+        total_loss = loss_1 + loss_2 + taco_loss
+        return total_loss, loss_1, loss_2, taco_loss

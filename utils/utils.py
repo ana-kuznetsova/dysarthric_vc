@@ -107,7 +107,7 @@ def init_encoder(config):
 
     #Initialize General encoder
 
-    model = GeneralEncoder(inp_feature_dim=config.encoder.feat_encoder_dim,
+    model = GeneralEncoder(
                 feature_extractor=feat_extractor,
                 feat_extractor_dim=config.encoder.feat_encoder_dim,
                 hidden_dim=config.encoder.hidden_dim, 
@@ -134,8 +134,13 @@ def init_encoder(config):
 def init_decoder(config):
     decoder = Tacotron2Conditional()
     decoder.load_state_dict(torch.load(config.decoder.ckpt))
-
-    if config.decoder.freeze_decoder:
-        freeze_params(decoder)
+    
+    #Freeze encoder, unfreeze decoder and postnet
+    
+    for name, param in model.named_parameters():
+        if 'encoder' in name:
+            param.requires_grad = False
+        else:
+            param.requires_grad = True
 
     return decoder
