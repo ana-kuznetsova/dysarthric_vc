@@ -57,7 +57,7 @@ class Tacotron2Conditional(Tacotron2):
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
             output_lengths,
             alignments_dim,
-        )
+        ), targets, input_lengths, output_lengths, mel_outputs_postnet, mel_outputs
 
 '''
 ckpt =  "/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/model.ckpt"

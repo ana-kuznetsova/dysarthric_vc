@@ -137,7 +137,7 @@ def init_decoder(config):
     
     #Freeze encoder, unfreeze decoder and postnet
     
-    for name, param in model.named_parameters():
+    for name, param in decoder.named_parameters():
         if 'encoder' in name:
             param.requires_grad = False
         else:

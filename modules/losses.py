@@ -85,19 +85,30 @@ class LossGeneral(nn.Module):
 
         '''
         self.taco_loss = TacoLoss(guided_attention_sigma=0.2,
-                                  gate_loss_weight=1.0
+                                  gate_loss_weight=1.0,
                                   guided_attention_weight=50.0,
                                   guided_attention_scheduler=guided_attention_scheduler,
                                   guided_attention_hard_stop=10.0
                                   )
+        self.mse_loss = nn.MSELoss()
 
-    def forward(self, x, cls_target, outs):
-        mels_pred = outs['mel_outputs']
-        mels_pred_postnet = outs['mel_outputs_postnet']
+    def forward(self, x, cls_target, outs, epoch):
+
         cls_out = outs['spk_cls']
-       
-        loss_1 = self.alpha1*self.rc_loss(x, mels_pred)
+
+        #Returns LossStats (named tuple) total_loss, mel_loss, gate_loss, attn_loss, attn_weight
+        #model_output, targets, input_lengths, target_lengths, epoch
+        decoder_outputs = outs["decoder_outputs"]
+        targets = outs['targets']
+        input_lengths = outs['input_lengths']
+        target_lengths =  outs['target_lengths']
+        mels_pred_postnet = outs['mels_pred_postnet']
+        mel_outputs = outs['mels_pred']
+
+        loss_1 = self.alpha1*self.rc_loss(x, mels_pred_postnet)
         loss_2 = self.alpha2*self.spk_ce_loss(cls_out, cls_target)
-        taco_loss = self.taco_loss(mels_pred, mels_pred_postnet)
+
+        #taco_loss = self.taco_loss(decoder_outputs, targets, input_lengths, target_lengths, epoch)
+        taco_loss = self.mse_loss(mel_outputs, mels_pred_postnet)
         total_loss = loss_1 + loss_2 + taco_loss
         return total_loss, loss_1, loss_2, taco_loss

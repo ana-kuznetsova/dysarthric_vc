@@ -46,8 +46,13 @@ def filter_speakers(config):
     test_spk = list(config.data.test_partition)
     ignore = config.data.ignore_speakers
     all_wav_paths = collect_fnames(config.data.dataset_path)
-    if ignore[0]:
-        all_wav_paths = [f for f in all_wav_paths for i in ignore if i not in f]
+    
+    if len(ignore) > 0:
+        ignore_files = [f for i in ignore for f in all_wav_paths if i in f]
+    
+    for i in ignore_files:
+        all_wav_paths.remove(i)
+
     test_files = []
     train_files = []
 
@@ -84,12 +89,12 @@ def filter_speakers(config):
                 train_files.append(path)
         unique_speakers = list(set(file2spk_map.values()))
     
+    
     if ignore[0]:
         for i in ignore:
             unique_speakers.remove(i)
             if os.path.exists('log.txt'):
                 unique_speakers.remove('log.txt')
-
     spk2id_map = {}
 
     for i in range(len(unique_speakers)):
@@ -103,7 +108,10 @@ def filter_speakers(config):
     if config.data.dataset=='VCTK':
         for i in train_files:
             spk_id = i.split('/')[-1].split('_')[0].replace('.wav', '')
-            train_spk_ids.append(spk2id_map[spk_id])
+            if spk_id in ignore:
+                train_files.remove(i)
+            else:
+                train_spk_ids.append(spk2id_map[spk_id])
 
         for i in test_files:
             spk_id = i.split('/')[-1].split('_')[0].replace('.wav', '')
@@ -193,7 +201,7 @@ class VCTKData(data.Dataset):
                 sent = text_dict[fname]["label"]
                 self.text_train.append(sent)
             except KeyError:
-                #print(fname)
+                #print(fname) #there was no text for p315 -> remove p315 from everywhere
                 train_files.remove(f)
                 continue
 
@@ -201,6 +209,9 @@ class VCTKData(data.Dataset):
             fname = f.split('/')[-1].replace('.wav', '')
             sent = text_dict[fname]["label"]
             self.text_test.append(sent)
+
+        assert len(self.train_files) == len(self.train_spk_ids) == len(self.text_train), "Data sizes in train do not match."
+        assert len(self.test_files) == len(self.test_spk_ids) == len(self.text_test), "Data sizes in test do not match"
 
     def __len__(self):
         if self.mode=='train':

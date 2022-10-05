@@ -24,8 +24,13 @@ class JointVC(nn.Module):
         spk_embed = outputs["spk_emb"]
         attr_embed = outputs["attr_emb"]
         cond_embed = torch.cat((spk_embed, attr_embed), dim=1)
-        mel_outputs, mel_outputs_postnet, gate_outputs, alignments = self.decoder(text, target, cond_embed, interface)
 
-        outputs["mel_outputs"] = mel_outputs
-        outputs["mel_outputs_postnet"] = mel_outputs_postnet
+        decoder_outputs, targets, input_lengths, target_lengths, mels_pred_postnet, mel_outputs = self.decoder(text, target, cond_embed, interface)
+        
+        outputs["decoder_outputs"] = decoder_outputs
+        outputs["input_lengths"] =  input_lengths
+        outputs["target_lengths"] = target_lengths
+        outputs["targets"] = target
+        outputs["mels_pred_postnet"] = mels_pred_postnet
+        outputs["mels_pred"] = mel_outputs
         return outputs

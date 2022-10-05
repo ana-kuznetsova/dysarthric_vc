@@ -4,7 +4,7 @@
         "text_path":"/home/anakuzne/utils/all.json",
         "train_partition":null,
         "test_partition":["p225", "p228", "p229", "p343", "p226", "p227", "p311", "p363"],
-        "ignore_speakers":["s5"],
+        "ignore_speakers":["s5", "p315"],
         "num_speakers":109,
         "feature": "melspec",
         "feature_dim":80,
@@ -50,8 +50,9 @@
     "runner":{
         "wandb":false,
         "project_name": "dysarthric_vc",
-        "run_name":"attr_enc_no_pitch_ft_augment_lr_0001_restored15ep_frozen",
-        "entity":"anakuzne", 
+        "run_name":"joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss",
+        "entity":"anakuzne",
+        "ckpt_path":"/home/anakuzne/exp/joint_vc/joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss",
         "log_config":true,
         "data_parallel":false,
         "cuda_device":[0, 1]

@@ -135,7 +135,7 @@ def run_training(config, config_path):
         encoder = init_encoder(config)
         decoder = init_decoder(config)
         model = JointVC(encoder, decoder)
-        ## Initialize attention scheduler
+        ## Initialize attention scheduler if needed
         criterion = LossGeneral()
         optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
         lr_scheduler = None

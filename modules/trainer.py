@@ -150,8 +150,7 @@ class Trainer():
                 epoch_train_loss = 0
                 epoch_train_loss_1 = 0
                 epoch_train_loss_2 = 0
-                epoch_mi_loss = 0
-                epoch_mi_learn_loss = 0
+                epoch_train_mse = 0
                 for i, batch in enumerate(train_loader):
                     x = batch['x'].to(device)
                     text = batch['text'].to(device)
@@ -159,8 +158,7 @@ class Trainer():
                     spk_true = batch['spk_id'].to(device)
                     optimizer.zero_grad()
                     outs = model(x, text, target, interface)
-                    loss, l1, l2 =  criterion(x,  spk_true, outs)
-                    print(loss)
+                    loss, l1, l2, mse =  criterion(x,  spk_true, outs, ep)
                     loss.backward()
                     optimizer.step()
                     if scheduler:
@@ -173,12 +171,14 @@ class Trainer():
                 epoch_train_loss/=len(train_loader)
                 epoch_train_loss_1/=len(train_loader)
                 epoch_train_loss_2/=len(train_loader)
+                epoch_train_mse/=len(train_loader)
                     
 
                 ##Validation loop
                 val_loss = 0
                 val_loss_1 = 0
                 val_loss_2 = 0
+                val_loss_mse = 0
                 with torch.no_grad():
                     for batch in val_loader:
                         x = batch['x'].to(device)
@@ -191,17 +191,18 @@ class Trainer():
                         val_loss_1+=l1.data
                         val_loss_2+=l2.data
 
-                val_loss = val_loss/len(val_loader)
-                val_loss_1 = val_loss_1/len(val_loader)
-                val_loss_2 = val_loss_2/len(val_loader)
+                val_loss/=len(val_loader)
+                val_loss_1/=len(val_loader)
+                val_loss_2/=len(val_loader)
+                val_loss_mse/=len(val_loader)
 
                 print(f'> [Epoch]:{ep+1} [Train Loss]:{epoch_train_loss.data}')
                 print(f'> [Epoch]:{ep+1} [Valid Loss]:{val_loss.data}')
                 if self.config.runner.wandb:
                     wandb.log({"train_loss": epoch_train_loss.data,
                                "val_loss": val_loss.data, "l1_rc":epoch_train_loss_1,
-                                "ce_loss":epoch_train_loss_2,
-                                "val_l1_rc_loss":val_loss_1,
+                                "ce_loss":epoch_train_loss_2, "mse_loss": epoch_train_mse,
+                                "val_l1_rc_loss":val_loss_1, "val_mse_loss":val_mse_loss,
                                 "val_ce_loss":val_loss_2})
                 if val_loss < prev_val_loss:
                     #Save checkpoint and lr_sched state
