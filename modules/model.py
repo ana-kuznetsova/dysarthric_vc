@@ -1,4 +1,4 @@
-from modules.encoder import GeneralEncoder
+from modules.encoder import GeneralEncoder, MLP
 from modules.decoder import Tacotron2Conditional
 from torch import nn
 import torch
