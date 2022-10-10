@@ -144,20 +144,28 @@ class Trainer():
             interface = Interface()
             interface = interface.to(device)
 
-
+            
             while ep < self.config.trainer.epoch:
                 print(f"Starting [epoch]:{ep+1}/{self.config.trainer.epoch}")
                 epoch_train_loss = 0
                 epoch_train_loss_1 = 0
                 epoch_train_loss_2 = 0
                 epoch_train_mse = 0
+                missed_batches = 0
+                missed_fnames = []
+                _ = model.train()
                 for i, batch in enumerate(train_loader):
                     x = batch['x'].to(device)
                     text = batch['text'].to(device)
                     target = batch["target"].to(device)
                     spk_true = batch['spk_id'].to(device)
                     optimizer.zero_grad()
-                    outs = model(x, text, target, interface)
+                    try:
+                        outs = model(x, text, target, interface)
+                    except AssertionError:
+                        missed_batches+=1
+                        missed_fnames.extend(batch['fnames'])
+                        continue
                     loss, l1, l2, mse =  criterion(x,  spk_true, outs, ep)
                     loss.backward()
                     optimizer.step()
@@ -168,41 +176,54 @@ class Trainer():
                     epoch_train_loss_1+=l1.data
                     epoch_train_loss_2+=l2.data
                 
-                epoch_train_loss/=len(train_loader)
-                epoch_train_loss_1/=len(train_loader)
-                epoch_train_loss_2/=len(train_loader)
-                epoch_train_mse/=len(train_loader)
-                    
+                epoch_train_loss/=(len(train_loader) - missed_batches)
+                epoch_train_loss_1/=(len(train_loader) - missed_batches)
+                epoch_train_loss_2/=(len(train_loader) - missed_batches)
+                epoch_train_mse/=(len(train_loader) - missed_batches)
 
                 ##Validation loop
                 val_loss = 0
                 val_loss_1 = 0
                 val_loss_2 = 0
                 val_loss_mse = 0
+                missed_val_batches = 0
+                missed_val_fnames = []
+                _ = model.eval()
                 with torch.no_grad():
                     for batch in val_loader:
                         x = batch['x'].to(device)
-                        #p = batch['p'].to(device)
+                        text = batch['text'].to(device)
+                        target = batch["target"].to(device)
                         spk_true = batch['spk_id'].to(device)
-                        t = batch['text'].to(device)
-                        outs = model(x, t)
-                        loss, l1, l2, mi_loss = criterion(x, spk_true, outs, interface)
+                        optimizer.zero_grad()
+                        try:
+                            outs = model(x, text, target, interface)
+                        except AssertionError:
+                            missed_val_fnames.extend(batch['fnames'])
+                            missed_val_batches+=1
+                            continue
+                        loss, l1, l2, mse =  criterion(x,  spk_true, outs, ep)
                         val_loss+=loss.data
                         val_loss_1+=l1.data
                         val_loss_2+=l2.data
+                        val_loss_mse+=mse.data
 
-                val_loss/=len(val_loader)
-                val_loss_1/=len(val_loader)
-                val_loss_2/=len(val_loader)
-                val_loss_mse/=len(val_loader)
+                val_loss/=(len(val_loader) - missed_val_batches)
+                val_loss_1/=(len(val_loader) - missed_val_batches)
+                val_loss_2/=(len(val_loader) - missed_val_batches)
+                val_loss_mse/=(len(val_loader) - missed_val_batches)
 
+                print(f'> Missed validation batches in epoch {ep}: {missed_val_batches}, missed files {missed_val_fnames}')
                 print(f'> [Epoch]:{ep+1} [Train Loss]:{epoch_train_loss.data}')
                 print(f'> [Epoch]:{ep+1} [Valid Loss]:{val_loss.data}')
+                print(f'> Missed batches in epoch {ep}: {missed_batches}, missed files {missed_fnames}')
+                print(f'> Missed validation batches in epoch {ep}: {missed_val_batches}, missed files {missed_val_fnames}')
+
                 if self.config.runner.wandb:
                     wandb.log({"train_loss": epoch_train_loss.data,
                                "val_loss": val_loss.data, "l1_rc":epoch_train_loss_1,
                                 "ce_loss":epoch_train_loss_2, "mse_loss": epoch_train_mse,
-                                "val_l1_rc_loss":val_loss_1, "val_mse_loss":val_mse_loss,
+                                "val_l1_rc_loss":val_loss_1, "val_mse_loss":val_loss_mse,
                                 "val_ce_loss":val_loss_2})
                 if val_loss < prev_val_loss:
                     #Save checkpoint and lr_sched state

@@ -64,10 +64,11 @@ class LossGeneral(nn.Module):
     This class computes the loss over basic setup of the encoder
     The loss is the weighted sum over embedding reconstru
     '''
-    def __init__(self, alpha1=1, alpha2=1, guided_attention_scheduler=None):
+    def __init__(self, alpha1=1, alpha2=1, alpha3=1, guided_attention_scheduler=None):
         super(LossGeneral, self).__init__()
         self.alpha1 = alpha1
         self.alpha2 = alpha2
+        self.alpha3 = alpha3
         self.rc_loss = nn.L1Loss()
         self.spk_ce_loss = nn.CrossEntropyLoss()
         '''
@@ -105,10 +106,10 @@ class LossGeneral(nn.Module):
         mels_pred_postnet = outs['mels_pred_postnet']
         mel_outputs = outs['mels_pred']
 
-        loss_1 = self.alpha1*self.rc_loss(x, mels_pred_postnet)
-        loss_2 = self.alpha2*self.spk_ce_loss(cls_out, cls_target)
+        loss_1 = self.rc_loss(x, mels_pred_postnet)
+        loss_2 = self.spk_ce_loss(cls_out, cls_target)
 
         #taco_loss = self.taco_loss(decoder_outputs, targets, input_lengths, target_lengths, epoch)
-        taco_loss = self.mse_loss(mel_outputs, mels_pred_postnet)
-        total_loss = loss_1 + loss_2 + taco_loss
+        taco_loss = self.mse_loss(mel_outputs, x) + self.mse_loss(mels_pred_postnet, x)
+        total_loss = self.alpha1*loss_1 + self.alpha2*loss_2 + self.alpha3*taco_loss
         return total_loss, loss_1, loss_2, taco_loss

@@ -13,9 +13,9 @@
     },
     "trainer":{
         "epoch":10000,
-        "batch_size":8,
+        "batch_size":32,
         "scheduler":false,
-        "lr":0.0001
+        "lr":0.001
     },
     "model":{
         "model_name":"joint_vc",
@@ -31,8 +31,8 @@
         "freeze_spk_enc":true,
         "unfreeze_layers":null,
         "use_mi": false,
-        "ckpt_path":"/home/anakuzne/exp/general_encoder/gen_enc_v3",
-        "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1",
+        "ckpt_path":null,
+        "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc_ft_d_v1_unfreeze_all_no_sched",
         "restore_epoch":null
     },
     "decoder":{
@@ -41,18 +41,17 @@
         "freeze_decoder":true,
         "unfreeze_layers":null
     },
-   "mi_estimator":{
-        "x_dim":128,
-        "y_dim":128,
-        "hidden_dim":16,
-        "mi_iter":10
+    "loss":{
+        "alpha1":0.8,
+        "alpha2":0.2,
+        "alpha3":0.8
     },
     "runner":{
-        "wandb":false,
+        "wandb":true,
         "project_name": "dysarthric_vc",
-        "run_name":"joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss",
+        "run_name":"joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss_sim001_regularized",
         "entity":"anakuzne",
-        "ckpt_path":"/home/anakuzne/exp/joint_vc/joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss",
+        "ckpt_path":"/home/anakuzne/exp/joint_vc/joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss_sim_001_regularized",
         "log_config":true,
         "data_parallel":false,
         "cuda_device":[0, 1]

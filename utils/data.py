@@ -400,8 +400,12 @@ def collate_spk_enc_vc(data):
 
     taco_inputs = speechbrain.dataio.batch.PaddedBatch(taco_inputs)
     taco_targets =  speechbrain.dataio.batch.PaddedBatch(taco_targets)
+    files = [i[0] for i in data]
 
-    return {"x":padded_mels, "spk_id":batch_speakers, "text":taco_inputs, "target":taco_targets}
+    assert padded_mels.shape[2] == taco_targets['mel_specs'].data.shape[1], f"x inputs {padded_mels.shape[2]}\
+                                                                                and taco targets {taco_targets['mel_specs'].data.shape[1]} do not match"
+
+    return {"x":padded_mels, "spk_id":batch_speakers, "text":taco_inputs, "target":taco_targets, "fnames":files}
 
 
 def pad_noise(speech, noise):

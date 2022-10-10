@@ -1,6 +1,7 @@
 {   "data":{
         "dataset":"VCTK",
         "dataset_path":"/data/common/vctk/test",
+        "text_path":"/home/anakuzne/utils/all.json",
         "train_partition":null,
         "test_partition":["p228"],
         "ignore_speakers":["s5"],
@@ -19,31 +20,43 @@
         "lr":0.0001
     },
     "model":{
+        "model_name":"joint_vc",
+        "restore_epoch":null
+    },
+    "encoder":{
         "model_name":"general_encoder",
         "feat_encoder_dim":512,
         "num_speakers":4,
         "num_utter":8,
-        "hidden_dim":128, 
-        "feat_extractor":"speaker_encoder", 
-        "freeze_spk_enc":false,
-        "use_mi": true
+        "hidden_dim":128,
+        "feat_extractor":"speaker_encoder",
+        "freeze_spk_enc":true,
+        "unfreeze_layers":null,
+        "use_mi": false,
+        "ckpt_path":null,
+        "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc_ft_d_v1_unfreeze_all_no_sched",
+        "restore_epoch":null
     },
-    "mi_estimator":{
+    "decoder":{
+        "model_name":"tacotron2",
+        "ckpt":"/home/anakuzne/exp/tacotron2/fine_tune/1234/save/CKPT+2022-09-28+14-13-06+00/model.ckpt",
+        "freeze_decoder":true,
+        "unfreeze_layers":null
+    },
+   "mi_estimator":{
         "x_dim":128,
         "y_dim":128,
         "hidden_dim":16,
-        "mi_iter":2
+        "mi_iter":10
     },
     "runner":{
         "wandb":false,
-        "restore_epoch":false,
         "project_name": "dysarthric_vc",
-        "run_name":"test_general",
-        "entity":"anakuzne", 
+        "run_name":"joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss_sim",
+        "entity":"anakuzne",
+        "ckpt_path":"/home/anakuzne/exp/joint_vc/test",
         "log_config":true,
         "data_parallel":false,
-        "cuda_device":[0, 1],
-        "ckpt_path":"/home/anakuzne/exp/general_encoder/test",
-        "spk_enc_path":"/home/anakuzne/exp/spk_encoder/spk_enc1"
+        "cuda_device":[0, 1]
     }
 }

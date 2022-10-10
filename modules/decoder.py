@@ -21,17 +21,19 @@ class Tacotron2Conditional(Tacotron2):
         #'Alingnments dim needed for data parallel'
 
         inputs = text['text_sequences'].data
-        max_len = max([i.shape[0] for i in inputs])
+        max_len = inputs.shape[1]
         input_lengths = text['text_sequences'].lengths
-        input_lengths = torch.tensor([i*max_len for i in input_lengths])
+
+        input_lengths = torch.round(max_len*input_lengths)
+        
 
         output_lengths = targets['mel_specs'].lengths
         targets = targets['mel_specs'].data
         
         targets = torch.transpose(targets, 1, 2)
         
-        max_len = max([i.shape[1] for i in targets])
-        output_lengths = torch.tensor([i*max_len for i in output_lengths])
+        max_len = targets.shape[2]
+        output_lengths = torch.round(max_len*output_lengths)
 
         embedded_inputs = self.embedding(inputs).transpose(1, 2)
 
@@ -52,6 +54,8 @@ class Tacotron2Conditional(Tacotron2):
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
+
+        assert mel_outputs_postnet.shape[2]==mel_outputs.shape[2], f"Decoder and postnet outputs {mel_outputs.shape}, {mel_outputs_postnet.shape} "
    
         return self.parse_output(
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],

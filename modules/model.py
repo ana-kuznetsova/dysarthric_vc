@@ -26,7 +26,7 @@ class JointVC(nn.Module):
         cond_embed = torch.cat((spk_embed, attr_embed), dim=1)
 
         decoder_outputs, targets, input_lengths, target_lengths, mels_pred_postnet, mel_outputs = self.decoder(text, target, cond_embed, interface)
-        
+        assert x.shape[2]==mels_pred_postnet.shape[2], f"input x of shape {x.shape} does not match mels_postnet {mels_pred_postnet.shape}"
         outputs["decoder_outputs"] = decoder_outputs
         outputs["input_lengths"] =  input_lengths
         outputs["target_lengths"] = target_lengths
