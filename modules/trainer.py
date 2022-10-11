@@ -9,6 +9,7 @@ from tqdm import tqdm
 from utils.utils import optimizer_to, shuffle_tensor
 from modules.losses import CLUB
 from modules.decoder import Interface
+from utils.feat_extractor import FeatureExtractor
 
 class Trainer():
     def __init__(self, configs):
@@ -132,7 +133,8 @@ class Trainer():
         #### Joint VC Training###
         ########################################
 
-        if self.config.model.model_name=='joint_vc':
+        if (self.config.model.model_name=='joint_vc') or (self.config.model.model_name=='dysarthric_vc'):
+            model_name = self.config.model.model_name
             if self.config.model.restore_epoch:
                 ep = self.config.runner.restore_epoch
                 optimizer_to(optimizer, device)
@@ -143,7 +145,8 @@ class Trainer():
             no_improvement = 0
             interface = Interface()
             interface = interface.to(device)
-
+            if self.config.model.interface:
+                interface.load_state_dict(torch.load(self.config.model.interface))
             
             while ep < self.config.trainer.epoch:
                 print(f"Starting [epoch]:{ep+1}/{self.config.trainer.epoch}")
@@ -151,22 +154,22 @@ class Trainer():
                 epoch_train_loss_1 = 0
                 epoch_train_loss_2 = 0
                 epoch_train_mse = 0
-                missed_batches = 0
-                missed_fnames = []
-                _ = model.train()
+           
+                model.train()
                 for i, batch in enumerate(train_loader):
                     x = batch['x'].to(device)
                     text = batch['text'].to(device)
                     target = batch["target"].to(device)
                     spk_true = batch['spk_id'].to(device)
+                    d_labels = batch['d_labels'].to(device)
                     optimizer.zero_grad()
-                    try:
-                        outs = model(x, text, target, interface)
-                    except AssertionError:
-                        missed_batches+=1
-                        missed_fnames.extend(batch['fnames'])
-                        continue
-                    loss, l1, l2, mse =  criterion(x,  spk_true, outs, ep)
+                    outs = model(x, text, target, interface)
+    
+                    if model_name=='joint_vc':
+                        loss, l1, l2, mse =  criterion(x,  spk_true, outs, ep)
+                    else:
+                        loss, l1, l2, mse = criterion(x, d_labels, outs)
+
                     loss.backward()
                     optimizer.step()
                     if scheduler:
@@ -176,42 +179,41 @@ class Trainer():
                     epoch_train_loss_1+=l1.data
                     epoch_train_loss_2+=l2.data
                 
-                epoch_train_loss/=(len(train_loader) - missed_batches)
-                epoch_train_loss_1/=(len(train_loader) - missed_batches)
-                epoch_train_loss_2/=(len(train_loader) - missed_batches)
-                epoch_train_mse/=(len(train_loader) - missed_batches)
+                epoch_train_loss/=len(train_loader)
+                epoch_train_loss_1/=len(train_loader)
+                epoch_train_loss_2/=len(train_loader)
+                epoch_train_mse/=len(train_loader)
 
                 ##Validation loop
                 val_loss = 0
                 val_loss_1 = 0
                 val_loss_2 = 0
                 val_loss_mse = 0
-                missed_val_batches = 0
-                missed_val_fnames = []
-                _ = model.eval()
+        
+                model.eval()
                 with torch.no_grad():
                     for batch in val_loader:
                         x = batch['x'].to(device)
                         text = batch['text'].to(device)
                         target = batch["target"].to(device)
                         spk_true = batch['spk_id'].to(device)
+                        d_labels = batch['d_labels'].to(device)
                         optimizer.zero_grad()
-                        try:
-                            outs = model(x, text, target, interface)
-                        except AssertionError:
-                            missed_val_fnames.extend(batch['fnames'])
-                            missed_val_batches+=1
-                            continue
-                        loss, l1, l2, mse =  criterion(x,  spk_true, outs, ep)
+                        outs = model(x, text, target, interface)
+    
+                        if model_name=='joint_vc':
+                            loss, l1, l2, mse =  criterion(x,  spk_true, outs, ep)
+                        else:
+                            loss, l1, l2, mse = criterion(x, d_labels, outs)
                         val_loss+=loss.data
                         val_loss_1+=l1.data
                         val_loss_2+=l2.data
                         val_loss_mse+=mse.data
 
-                val_loss/=(len(val_loader) - missed_val_batches)
-                val_loss_1/=(len(val_loader) - missed_val_batches)
-                val_loss_2/=(len(val_loader) - missed_val_batches)
-                val_loss_mse/=(len(val_loader) - missed_val_batches)
+                val_loss/=len(val_loader)
+                val_loss_1/=len(val_loader)
+                val_loss_2/=len(val_loader)
+                val_loss_mse/=len(val_loader)
 
                 print(f'> Missed validation batches in epoch {ep}: {missed_val_batches}, missed files {missed_val_fnames}')
                 print(f'> [Epoch]:{ep+1} [Train Loss]:{epoch_train_loss.data}')
@@ -307,3 +309,19 @@ class Trainer():
             np.save(os.path.join(out_dir, 'Y.npy'), save_spk)
 
             print(f'Saved inference results at {out_dir}')
+        
+        elif self.config.model.model_name=='joint_vc':
+            interface = Interface()
+            if self.config.model.interface:
+                interface.load_state_dict(torch.load(self.config.model.interface))
+
+            feat_extractor = FeatureExtractor(model=model, layers=["speaker_encoder", "attr_predictor"])
+            for i, batch in enumerate(test_loader):
+                x = batch['x'].to(device)
+                text = batch['text'].to(device)
+                target = batch["target"].to(device)
+                spk_true = batch['spk_id'].to(device)
+                d_labels = batch['d_labels'].to(device)
+                outs = model(x, text, target, interface)
+                features = feat_extractor(x, text, target, interface)
+                print({name: output.shape for name, output in features.items()})

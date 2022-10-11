@@ -1,15 +1,14 @@
 {   "data":{
-        "dataset":"VCTK",
-        "dataset_path":"/data/common/vctk/wav48_silence_trimmed",
-        "text_path":"/home/anakuzne/utils/all.json",
-        "train_partition":null,
-        "test_partition":["p225", "p228", "p229", "p343", "p226", "p227", "p311", "p363"],
-        "ignore_speakers":["s5", "p315"],
-        "num_speakers":109,
-        "feature": "melspec",
-        "feature_dim":80,
-        "pitch":false,
-        "augment":false
+    "dataset":"UASpeech",
+    "dataset_path":"/data/common/ifp-08.ifp.uiuc.edu/protected/UASpeech/audio",
+    "meta_path":"/data/common/ifp-08.ifp.uiuc.edu/protected/UASpeech/UASpeech.csv",
+    "train_partition":null,
+    "ignore_speakers":[null],
+    "num_speakers":14,
+    "feature": "melspec",
+    "feature_dim":80,
+    "pitch":false,
+    "augment":false
     },
     "trainer":{
         "epoch":10000,
@@ -18,8 +17,10 @@
         "lr":0.001
     },
     "model":{
-        "model_name":"joint_vc",
-        "restore_epoch":null
+        "model_name":"dysarthric_vc",
+        "restore_epoch":null,
+        "ckpt_path":"/home/anakuzne/exp/joint_vc/joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss_sim_001/best_model.pth",
+        "interface":"/home/anakuzne/exp/joint_vc/joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss_sim_001/best_interface.pth"
     },
     "encoder":{
         "model_name":"general_encoder",
@@ -28,7 +29,6 @@
         "num_utter":8,
         "hidden_dim":128,
         "feat_extractor":"speaker_encoder",
-        "freeze_spk_id":true,
         "freeze_spk_enc":true,
         "unfreeze_layers":null,
         "use_mi": false,
@@ -45,14 +45,15 @@
     "loss":{
         "alpha1":0.8,
         "alpha2":0.2,
-        "alpha3":0.8
+        "alpha3":0.8, 
+        "alpha4":1
     },
     "runner":{
-        "wandb":false,
+        "wandb":true,
         "project_name": "dysarthric_vc",
-        "run_name":"joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss_sim_001_freeze_spk_id",
+        "run_name":"joint_vc_dysarth_ft_frozen_spk_embed_lr001_from_sim",
         "entity":"anakuzne",
-        "ckpt_path":"/home/anakuzne/exp/joint_vc/joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss_sim_001_freeze_spk_id",
+        "ckpt_path":"/home/anakuzne/exp/joint_vc/joint_vc_dysarth_ft_frozen_spk_embed_lr001_from_sim",
         "log_config":true,
         "data_parallel":false,
         "cuda_device":[0, 1]

@@ -116,32 +116,30 @@ class LossGeneral(nn.Module):
         return total_loss, loss_1, loss_2, taco_loss
 
 class DysarthTotalLoss(nn.Module):
-    def __init__(self, alpha1=1, alpha2=1, alpha3=1, alpha4=1, guided_attention_scheduler=None):
+    def __init__(self, alpha1=1, alpha2=1, alpha3=1):
         super(DysarthTotalLoss, self).__init__()
         self.alpha1 = alpha1
         self.alpha2 = alpha2
         self.alpha3 = alpha3
-        self.alpha4 = alpha4
         self.rc_loss = nn.L1Loss()
         self.spk_ce_loss = nn.CrossEntropyLoss()
-        self.d_classifier = MLP(128, 64, 4)
+        self.d_classifier = nn.Linear(128, 14)
         self.softmax = nn.Softmax(dim=1)
         self.d_ce_loss = nn.CrossEntropyLoss()
     
         self.taco_loss = TacoLoss(guided_attention_sigma=0.2,
                                   gate_loss_weight=1.0,
                                   guided_attention_weight=50.0,
-                                  guided_attention_scheduler=guided_attention_scheduler,
+                                  guided_attention_scheduler=None,
                                   guided_attention_hard_stop=10.0
                                   )
         self.mse_loss = nn.MSELoss()
 
-    def forward(self, x, cls_target, d_cls_target, outs, epoch):
+    def forward(self, x, d_cls_target, outs):
         #{"feats":feats, "proj":proj, "spk_cls":spk_cls_out, "spk_emb":spk_embed, "attr_emb":attr_embed}
-
-        cls_out = outs['spk_cls']
         attr_embed = outs['attr_emb']
-        d_cls_out = self.softmax(self.d_classifier(attr_emb))
+        d_cls_out = self.d_classifier(attr_embed)
+        d_cls_out = self.softmax(d_cls_out)
 
         #Returns LossStats (named tuple) total_loss, mel_loss, gate_loss, attn_loss, attn_weight
         #model_output, targets, input_lengths, target_lengths, epoch
@@ -152,11 +150,8 @@ class DysarthTotalLoss(nn.Module):
         mels_pred_postnet = outs['mels_pred_postnet']
         mel_outputs = outs['mels_pred']
 
-        loss_1 = self.rc_loss(x, mels_pred_postnet)
-        loss_2 = self.spk_ce_loss(cls_out, cls_target)
-        loss_4 = self.d_ce_loss(d_cls_out, d_cls_target)
-
-        #taco_loss = self.taco_loss(decoder_outputs, targets, input_lengths, target_lengths, epoch)
+        rc_loss = self.rc_loss(x, mels_pred_postnet)
+        d_ce_loss = self.d_ce_loss(d_cls_out, d_cls_target)
         taco_loss = self.mse_loss(mel_outputs, x) + self.mse_loss(mels_pred_postnet, x)
-        total_loss = self.alpha1*loss_1 + self.alpha2*loss_2 + self.alpha3*taco_loss + self.alpha4*loss_4
-        return total_loss, loss_1, loss_2, taco_loss, loss_4
+        total_loss = self.alpha1*rc_loss + self.alpha2*taco_loss + self.alpha3*d_ce_loss
+        return total_loss, rc_loss, d_ce_loss,  taco_loss

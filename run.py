@@ -1,7 +1,8 @@
-from utils.data import LibriTTSData, collate_fn, collate_spk_enc, load_config, VCTKData, VCTKAngleProtoData, collate_spk_enc_augment, UASpeechData, collate_spk_enc_vc
+from utils.data import LibriTTSData, collate_fn, collate_spk_enc, load_config, VCTKData, VCTKAngleProtoData, collate_spk_enc_augment, UASpeechData, collate_spk_enc_vc, collate_vc_d
 from modules.encoder import GeneralEncoder
+from modules.decoder import Tacotron2Conditional
 from modules.trainer import Trainer
-from modules.losses import LossGeneral
+from modules.losses import LossGeneral, DysarthTotalLoss
 from modules.model import JointVC
 from utils.eval import evaluate
 from utils.utils import move_device, freeze_params, get_features, init_encoder, init_decoder
@@ -41,6 +42,8 @@ def run_training(config, config_path):
 
     elif (config.data.dataset=='VCTK' or config.data.dataset=='DysarthricSim') and config.model.model_name=='speaker_encoder':
         dataset = VCTKAngleProtoData(config, mode='train')
+    elif config.data.dataset=='UASpeech':
+        dataset = UASpeechData(config, 'train')
     else:
         dataset = VCTKData(config, mode='train')
 
@@ -92,6 +95,10 @@ def run_training(config, config_path):
             train_collate = collate_spk_enc_vc
             val_collate = collate_spk_enc_vc
 
+        elif config.model.model_name=='dysarthric_vc':
+            train_collate = collate_vc_d
+            val_collate = collate_vc_d
+
         train_loader = DataLoader(train,
                                     batch_size=config.trainer.batch_size, 
                                     shuffle=True, collate_fn=train_collate,
@@ -105,7 +112,7 @@ def run_training(config, config_path):
 
 
     ## Define model
-    avail_models = ["speaker_encoder", "general_encoder", "joint_vc"]
+    avail_models = ["speaker_encoder", "general_encoder", "joint_vc", "dysarthric_vc"]
 
     if not config.model.model_name in avail_models:
         raise NotImplementedError(f"{config.model.model_name}: model not implemented")
@@ -139,6 +146,27 @@ def run_training(config, config_path):
         criterion = LossGeneral(config.loss.alpha1, config.loss.alpha2, config.loss.alpha3)
         optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
         lr_scheduler = None
+    
+    elif config.model.model_name=='dysarthric_vc':
+        #Init spk encoder
+        feat_extractor = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
+        encoder = GeneralEncoder(
+                feature_extractor=feat_extractor,
+                feat_extractor_dim=config.encoder.feat_encoder_dim,
+                hidden_dim=config.encoder.hidden_dim, 
+                batch_size=config.trainer.batch_size, num_classes=109, mi=config.encoder.use_mi)
+        decoder = Tacotron2Conditional()
+        model = JointVC(encoder, decoder)
+
+    
+        model_dict = torch.load(config.model.ckpt_path)
+        model.load_state_dict(model_dict)
+        #freeze whatever is in spk classifier
+        encoder.speaker_cls = torch.nn.Linear(config.encoder.hidden_dim, config.encoder.num_speakers)
+        freeze_params(model, ["speaker_encoder", "speaker_cls"])
+        criterion = DysarthTotalLoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=config.trainer.lr)
+        lr_scheduler = None
 
 
     trainer = Trainer(config)
@@ -153,14 +181,27 @@ def run_inference(config, out_dir):
         dataset_test = VCTKAngleProtoData(config, mode='test')
 
     elif config.data.dataset=='UASpeech':
-        dataset_test = UASpeechData(config)
+        dataset_test = UASpeechData(config, 'test')
+
+    if config.model.model_name=='speaker_encoder':
+        collate = collate_spk_enc
+
+    elif config.model.model_name=='joint_vc' or config.model.model_name=='dysarthric_vc':
+        collate = collate_vc_d
+
 
     test_loader = DataLoader(dataset_test, batch_size=config.trainer.batch_size, 
-                                shuffle=False, collate_fn=collate_spk_enc,
+                                shuffle=False, collate_fn=collate,
                                 drop_last=True, num_workers=2, pin_memory=False
                             )
 
-    model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
+    if config.model.model_name=='speaker_encoder':
+        model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
+    elif config.model.model_name=='joint_vc':
+        encoder = init_encoder(config)
+        decoder = init_decoder(config)
+        model = JointVC(encoder, decoder)
+
 
     trainer = Trainer(config)
     trainer.inference(test_loader, model, 

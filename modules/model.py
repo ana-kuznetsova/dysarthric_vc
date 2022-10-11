@@ -17,7 +17,6 @@ class JointVC(nn.Module):
         super(JointVC, self).__init__()
         self.encoder = encoder
         self.decoder = decoder
-
     def forward(self, x, text, target, interface):
         outputs = self.encoder(x)
         #{"feats":feats, "proj":proj, "spk_cls":spk_cls_out, "spk_emb":spk_embed, "attr_emb":attr_embed}

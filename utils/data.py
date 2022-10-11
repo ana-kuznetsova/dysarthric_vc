@@ -140,21 +140,43 @@ class UASpeechData(data.Dataset):
         self.meta_path = config.data.meta_path
         self.files = []
         self.labels = []
+        self.texts = []
+        self.spk_ids = []
 
         df = pd.read_csv(self.meta_path)
+        unique_speakers = set(df['spk_id'])
+        spk2id_map = {s:i for i, s in enumerate(unique_speakers)}
+
         for i, row in df.iterrows():
             spk_id = row['fname'].split('_')[0]
             path = os.path.join(self.data_path, spk_id, row['fname'])
+            spk_id = spk2id_map[spk_id]
+            self.spk_ids.append(spk_id)
             self.files.append(path)
             self.labels.append(row['level'])
+            self.texts.append(row['text'])
         print(f"> Found {len(self.files)} files...")
+
+        len_train = int(len(self.files)*0.9)
+        if mode=='train':
+            self.files = self.files[:len_train]
+            self.labels = self.labels[:len_train]
+            self.texts = self.texts[:len_train]
+            self.spk_ids = self.spk_ids[:len_train]
+        else:
+            self.files = self.files[len_train:]
+            self.labels = self.labels[len_train:]
+            self.texts = self.texts[len_train:]
+            self.spk_ids = self.spk_ids[len_train:]
+
+
     def __len__(self):
         return len(self.files)
     
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        return (self.files[idx], self.labels[idx])
+        return (self.files[idx], self.labels[idx], self.texts[idx], self.spk_ids[idx])
 
 
 class LibriTTSData(data.Dataset):
@@ -406,6 +428,61 @@ def collate_spk_enc_vc(data):
                                                                                 and taco targets {taco_targets['mel_specs'].data.shape[1]} do not match"
 
     return {"x":padded_mels, "spk_id":batch_speakers, "text":taco_inputs, "target":taco_targets, "fnames":files}
+
+
+
+def collate_vc_d(data):
+    '''
+    For batch
+    '''
+    sr=16000
+    mel_specs = []
+    transform = transforms.MelSpectrogram(sr, n_mels=80, f_min=0.0, 
+                                         f_max=8000.0, hop_length=256,
+                                         win_length=1024, n_fft=1024, normalized=True,
+                                         norm='slaney', mel_scale='slaney')
+    text_cleaners = ["english_cleaners"]
+
+    for fname in data:
+        wav, _ = torchaudio.load(fname[0])
+        spec = transform(wav)
+        mel_specs.append(spec)
+    
+    maxlen_mel = max([i.shape[-1] for i in mel_specs])
+    padded_mels = [nn.ZeroPad2d(padding=(0, maxlen_mel - i.shape[-1], 0, 0))(i) for i in mel_specs]
+    padded_mels = torch.stack(padded_mels)
+    
+    batch_speakers = torch.Tensor([i[3] for i in data]).long()
+    d_labels =  torch.Tensor([i[1] for i in data]).long()
+    texts = [i[2] for i in data]
+
+    #For TTS input
+    
+    taco_inputs = [{"text_sequences":torch.tensor(text_to_sequence(item, text_cleaners))} for item in texts]
+    taco_targets = [{"mel_specs":torch.transpose(i.squeeze(0), 0, 1)} for i in mel_specs]
+    lens = [i['text_sequences'].shape[0] for i in taco_inputs]
+    #Sort by text len
+    batch = list(zip(padded_mels, batch_speakers, taco_inputs, taco_targets, d_labels, lens))
+
+    def last(n):
+        return n[-1] 
+
+    batch = sorted(batch, key=last, reverse=True)
+    padded_mels, batch_speakers, taco_inputs, taco_targets, d_labels, lens = zip(*batch)
+    padded_mels = torch.stack(list(padded_mels)).squeeze(1)
+    
+    batch_speakers = torch.stack(list(batch_speakers))
+    d_labels = torch.stack(list(d_labels))
+
+    taco_inputs = speechbrain.dataio.batch.PaddedBatch(taco_inputs)
+    taco_targets =  speechbrain.dataio.batch.PaddedBatch(taco_targets)
+    files = [i[0] for i in data]
+
+    assert padded_mels.shape[2] == taco_targets['mel_specs'].data.shape[1], f"x inputs {padded_mels.shape[2]}\
+                                                                                and taco targets {taco_targets['mel_specs'].data.shape[1]} do not match"
+
+    return {"x":padded_mels, "spk_id":batch_speakers, "text":taco_inputs, "target":taco_targets, "fnames":files, "d_labels":d_labels}
+
 
 
 def pad_noise(speech, noise):
