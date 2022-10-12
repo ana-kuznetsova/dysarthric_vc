@@ -215,11 +215,10 @@ class Trainer():
                 val_loss_2/=len(val_loader)
                 val_loss_mse/=len(val_loader)
 
-                print(f'> Missed validation batches in epoch {ep}: {missed_val_batches}, missed files {missed_val_fnames}')
                 print(f'> [Epoch]:{ep+1} [Train Loss]:{epoch_train_loss.data}')
                 print(f'> [Epoch]:{ep+1} [Valid Loss]:{val_loss.data}')
-                print(f'> Missed batches in epoch {ep}: {missed_batches}, missed files {missed_fnames}')
-                print(f'> Missed validation batches in epoch {ep}: {missed_val_batches}, missed files {missed_val_fnames}')
+                #print(f'> Missed batches in epoch {ep}: {missed_batches}, missed files {missed_fnames}')
+                #print(f'> Missed validation batches in epoch {ep}: {missed_val_batches}, missed files {missed_val_fnames}')
 
                 if self.config.runner.wandb:
                     wandb.log({"train_loss": epoch_train_loss.data,
@@ -270,12 +269,8 @@ class Trainer():
             print(f"> Using CUDA {devices}")
             model = model.to(device)
             model = torch.nn.DataParallel(model, device_ids=devices)
-        
-        #Load checkpoint
-        ckpt_path = os.path.join(self.config.runner.ckpt_path, self.config.runner.restore_epoch)
-        model.load_state_dict(torch.load(ckpt_path))
 
-        
+        model.eval()
         if self.config.model.model_name=='speaker_encoder':
             save_output = None
             save_spk = None
@@ -312,16 +307,47 @@ class Trainer():
         
         elif self.config.model.model_name=='joint_vc':
             interface = Interface()
-            if self.config.model.interface:
-                interface.load_state_dict(torch.load(self.config.model.interface))
+            interface_path = os.path.join(self.config.runner.ckpt_path, "best_interface.pth")
+            interface.load_state_dict(torch.load(interface_path))
+            interface = interface.to(device)
 
-            feat_extractor = FeatureExtractor(model=model, layers=["speaker_encoder", "attr_predictor"])
+            feat_extractor = FeatureExtractor(model=model, layers=["encoder.speaker_encoder", "encoder.attr_predictor"])
+            print(f"Testing batches {len(test_loader)}...")
+
+            mels_specs_postnet = []
+            spk_embeds = []
+            attr_embeds = []
+            spk_targets = []
+
             for i, batch in enumerate(test_loader):
                 x = batch['x'].to(device)
                 text = batch['text'].to(device)
                 target = batch["target"].to(device)
                 spk_true = batch['spk_id'].to(device)
-                d_labels = batch['d_labels'].to(device)
                 outs = model(x, text, target, interface)
                 features = feat_extractor(x, text, target, interface)
-                print({name: output.shape for name, output in features.items()})
+                mels_specs_postnet.append(outs['mels_pred_postnet'].detach().cpu())
+                spk_embeds.append(features['encoder.speaker_encoder'].detach().cpu())
+                attr_embeds.append(features['encoder.attr_predictor'].detach().cpu())
+                spk_targets.append(spk_true.detach().cpu())
+                #print({name: output.shape for name, output in features.items()})
+            
+            num_utter = len(test_loader)*self.config.trainer.batch_size
+            print(f"Saving mel specs...")
+            for batch in tqdm(mels_specs_postnet):
+                for s in batch:
+                    s = s.numpy()
+                    fname = f"{num_utter}.npy"
+                    np.save(os.path.join(out_dir, 'specs', fname), s)
+                    num_utter-=1
+
+            print(f"Saving numpy embeddings...")
+            
+            spk_embeds = torch.stack(spk_embeds, dim=0).numpy()
+            attr_embeds = torch.stack(attr_embeds, dim=0).numpy()
+
+            spk_targets = torch.stack(spk_targets, dim=0).numpy()
+
+            np.save(os.path.join(out_dir, 'X_speaker.npy'), spk_embeds)
+            np.save(os.path.join(out_dir, 'Y_speaker.npy'), spk_targets)
+            np.save(os.path.join(out_dir, 'X_attr.npy'), attr_embeds)

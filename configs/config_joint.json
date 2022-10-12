@@ -53,6 +53,7 @@
         "run_name":"joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss_sim_001_freeze_spk_id",
         "entity":"anakuzne",
         "ckpt_path":"/home/anakuzne/exp/joint_vc/joint_vc_taco_enc_frozen_no_attn_sched_no_attn_loss_sim_001_freeze_spk_id",
+        "restore_epoch":"best_model",
         "log_config":true,
         "data_parallel":false,
         "cuda_device":[0, 1]

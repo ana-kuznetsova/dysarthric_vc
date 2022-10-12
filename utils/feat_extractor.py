@@ -1,5 +1,6 @@
 from typing import Dict, Iterable, Callable
 from torch import nn
+import torch
 
 class FeatureExtractor(nn.Module):
     def __init__(self, model: nn.Module, layers: Iterable[str]):

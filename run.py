@@ -180,13 +180,17 @@ def run_inference(config, out_dir):
     if config.data.dataset=='VCTK' and config.model.model_name=='speaker_encoder':
         dataset_test = VCTKAngleProtoData(config, mode='test')
 
+    if config.data.dataset=='VCTK' and config.model.model_name=='joint_vc':
+        dataset_test = VCTKData(config, mode='test')
+
     elif config.data.dataset=='UASpeech':
         dataset_test = UASpeechData(config, 'test')
 
-    if config.model.model_name=='speaker_encoder':
+    if config.model.model_name in ['speaker_encoder']:
         collate = collate_spk_enc
-
-    elif config.model.model_name=='joint_vc' or config.model.model_name=='dysarthric_vc':
+    elif config.model.model_name=='joint_vc':
+        collate = collate_spk_enc_vc
+    elif config.model.model_name=='dysarthric_vc':
         collate = collate_vc_d
 
 
@@ -198,9 +202,17 @@ def run_inference(config, out_dir):
     if config.model.model_name=='speaker_encoder':
         model = ResNetSpeakerEncoder(input_dim=config.data.feature_dim)
     elif config.model.model_name=='joint_vc':
+         #Load checkpoint
+
         encoder = init_encoder(config)
         decoder = init_decoder(config)
         model = JointVC(encoder, decoder)
+
+        ckpt_path = os.path.join(config.runner.ckpt_path, config.runner.restore_epoch)
+        model.load_state_dict(torch.load(ckpt_path))
+
+        if config.data.dataset=='UASpeech':
+            model.encoder.speaker_cls = torch.nn.Linear(config.encoder.hidden_dim, config.encoder.num_speakers)
 
 
     trainer = Trainer(config)
